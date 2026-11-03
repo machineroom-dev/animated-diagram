@@ -25,7 +25,8 @@ export default {
     const el = document.getElementById(`${id}-t`);
     if (el && el.textContent !== shown) el.textContent = shown;
     setA(`${id}-cur`, { x: -26 + 7.4 * shown.length });
-    // the highlight steps down one line every 22.5 frames: line 1, 2, 3, 4, then wraps
-    setA(`${id}-hl`, { y: LINES[Math.floor(f / 22.5) % 4][0] - 5 });
+    // the highlight steps down one line every 22.5 frames: line 1, 2, 3, 4, then wraps. The steps sit 11 frames off the
+    // loop point, so the wrap never lands on f89 → f0, where it would read as the loop jumping.
+    setA(`${id}-hl`, { y: LINES[Math.floor((f + 11) / 22.5) % 4][0] - 5 });
   },
 };

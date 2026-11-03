@@ -139,3 +139,18 @@ test('before npm install: render says what to run, icons still work', () => {
   assert.ok(stackless(r.stderr), r.stderr);
   assert.equal(run(['icons']).status, 0);
 });
+
+test('every library icon renders with no jump at the loop point', { timeout: 300_000 }, () => {
+  const dir = tmpDir('ad-allicons-');
+  const names = cli(['icons']).out.trim().split('\n').map(l => l.split(/\s+/)[0]);
+  assert.ok(names.length >= 20, names.join());
+  const bad = [];
+  for (const icon of names) {
+    const f = path.join(dir, `${icon}.json`);
+    fs.writeFileSync(f, JSON.stringify({ template: 'flow-grid', title: icon, panels: [{ grid: { cols: 1, rows: 1 }, nodes: [{ id: 'a', icon, name: icon, cell: [0, 0] }], steps: [] }] }));
+    const r = cli(['render', f, '--theme', 'machine-room-dark', '--out', path.join(dir, 'out')]);
+    if (r.code !== 0) bad.push(`${icon}: ${r.out.split('\n').filter(l => /SEAM|FLICKER/.test(l)).join(' ') || r.err}`);
+  }
+  assert.deepEqual(bad, []);
+});
+

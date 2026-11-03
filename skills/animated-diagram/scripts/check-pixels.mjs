@@ -2,14 +2,15 @@
 //   parseGif(buf) -> { width, height, frames, delays (cs), loop (0 = forever, null = plays once) }   headers only, no LZW
 //   checkGif(file, { frames, delayCs, maxBytes, budgetBytes, moving }) -> Promise<{ failures, warnings, bytes }>
 // The pixels come from ffmpeg (rgb24). A pixel "changes" between two frames when a channel moves by more than 24.
-//   SEAM: the f89 → f0 change is more than 1.5× the median frame-to-frame change.
+//   SEAM: the f89 → f0 change is more than 1.5× the median frame-to-frame change, and more than 0.05 % of the card
+//   (below that it can't be seen as a jump, and a card with little motion has a median near 0).
 //   FLICKER: pixels whose largest change over the loop is in (0, 24] — dither crawling on what should be still — are
 //   more than 0.05 % of the card. Pixels inside `moving` boxes (icons, arrows) are left out: an icon's slow turn or
 //   fade legitimately changes its anti-aliased edges by a few levels.
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 
-const STEP = 24, SEAM_RATIO = 1.5, FLICKER_SHARE = 0.0005;
+const STEP = 24, SEAM_RATIO = 1.5, SEAM_SHARE = 0.0005, FLICKER_SHARE = 0.0005;
 
 export function parseGif(buf) {
   if (buf.toString('latin1', 0, 3) !== 'GIF') throw new Error('not a GIF file');
@@ -85,7 +86,7 @@ export async function checkGif(file, { frames = 90, delayCs = 3, maxBytes, budge
   });
   if (n > 1) {
     const seam = delta(last, first, maxDelta), sorted = [...steps].sort((a, b) => a - b), median = sorted[Math.floor(sorted.length / 2)];
-    if (seam > SEAM_RATIO * median) fail('SEAM', `${seam} px change from the last frame to the first, against a median of ${median} between frames — the loop jumps`);
+    if (seam > SEAM_RATIO * median && seam > SEAM_SHARE * px) fail('SEAM', `${seam} px change from the last frame to the first, against a median of ${median} between frames — the loop jumps`);
     const still = new Uint8Array(px).fill(1);
     for (const b of moving) {
       const x0 = Math.max(0, Math.floor(b.x)), x1 = Math.min(h.width, Math.ceil(b.x + b.w)), y0 = Math.max(0, Math.floor(b.y)), y1 = Math.min(h.height, Math.ceil(b.y + b.h));

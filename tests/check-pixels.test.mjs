@@ -22,6 +22,16 @@ test('seam', async () => {
   assert.ok(!r.failures.some(f => f.code === 'FLICKER'), JSON.stringify(r));
 });
 
+test('a change too small to see at the loop point is no SEAM', async () => {
+  const dir = tmpDir('ad-tinyseam-');
+  for (let i = 0; i < 89; i++) ff(['-f', 'lavfi', '-i', 'color=c=0x3366cc:s=200x150', '-frames:v', '1', path.join(dir, `f${String(i).padStart(2, '0')}.png`)]);
+  ff(['-f', 'lavfi', '-i', 'color=c=0x3366cc:s=200x150,drawbox=x=10:y=10:w=2:h=2:color=0xffffff:t=fill', '-frames:v', '1', path.join(dir, 'f89.png')]);
+  const gif = path.join(dir, 'tiny.gif');
+  encodeGif(dir, gif, path.join(dir, 'palette.png'));
+  const r = await checkGif(gif, { frames: 90, delayCs: 3, maxBytes: 5_000_000 });
+  assert.ok(!r.failures.some(f => f.code === 'SEAM'), JSON.stringify(r));
+});
+
 test('flicker', async () => {
   const dir = tmpDir('ad-flicker-'), gif = path.join(dir, 'flicker.gif');
   // A static gradient with a box sliding across it: error diffusion re-dithers the gradient differently every frame.
