@@ -11,6 +11,13 @@ own idle animation.
 You need Node 22 or newer, Google Chrome and ffmpeg.
 
 ```sh
+npx skills add machineroom-dev/animated-diagram -g -a claude-code -y
+npm install --prefix ~/.claude/skills/animated-diagram
+```
+
+Or by hand:
+
+```sh
 git clone https://github.com/machineroom-dev/animated-diagram.git
 cp -r animated-diagram/skills/animated-diagram ~/.claude/skills/
 npm install --prefix ~/.claude/skills/animated-diagram
