@@ -1,0 +1,30 @@
+{
+  "canvas": "linkedin-portrait",
+  "template": "flow-grid",
+  "title": "How a CDN serves a request",
+  "panels": [
+    {
+      "grid": { "cols": 2, "rows": 3 },
+      "nodes": [
+        { "id": "user", "icon": "laptop", "name": "User", "sub": "browser", "cell": [0, 0] },
+        { "id": "dns", "icon": "globe", "name": "DNS", "sub": "returns the nearest edge", "cell": [1, 0] },
+        { "id": "edge", "icon": "rack", "name": "Edge server", "sub": "answers if it can", "cell": [0, 1] },
+        { "id": "cache", "icon": "cache", "name": "Edge cache", "sub": "copies of popular files", "cell": [1, 1] },
+        { "id": "origin", "icon": "tower", "name": "Origin server", "sub": "your app or bucket", "cell": [0, 2] },
+        { "id": "ttl", "icon": "stopwatch", "name": "TTL", "sub": "Cache-Control: max-age", "cell": [1, 2] }
+      ],
+      "groups": [{ "label": "EDGE PoP · CLOSE TO THE USER", "nodes": ["edge", "cache"] }],
+      "steps": [
+        { "n": 1, "from": "user", "to": "dns", "label": "DNS lookup" },
+        { "n": 2, "from": "dns", "to": "user", "label": "nearest edge IP", "reply": true },
+        { "n": 3, "from": "user", "to": "edge", "label": "GET /logo.png" },
+        { "n": 4, "from": "edge", "to": "cache", "label": "check cache" },
+        { "from": "cache", "to": "edge", "label": "HIT: copy found, skip to 7", "kind": "hit", "reply": true },
+        { "n": 5, "from": "edge", "to": "origin", "label": "MISS: fetch from origin", "kind": "miss" },
+        { "n": 6, "from": "origin", "to": "edge", "label": "logo.png + Cache-Control", "reply": true },
+        { "n": 7, "from": "edge", "to": "user", "label": "logo.png", "reply": true },
+        { "from": "ttl", "to": "cache", "label": "keeps the copy for max-age", "reply": true }
+      ]
+    }
+  ]
+}

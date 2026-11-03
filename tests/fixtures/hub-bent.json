@@ -1,0 +1,27 @@
+{
+  "canvas": "linkedin-portrait",
+  "template": "flow-grid",
+  "title": "How your browser finds google.com",
+  "panels": [
+    {
+      "grid": { "cols": 3, "rows": 3 },
+      "nodes": [
+        { "id": "browser", "icon": "laptop", "name": "Browser", "sub": "knows the name, not the address", "cell": [1, 0] },
+        { "id": "resolver", "icon": "rack", "name": "Resolver", "sub": "your ISP, or 8.8.8.8", "cell": [1, 1] },
+        { "id": "root", "icon": "globe", "name": "Root server", "sub": "knows who runs .com", "cell": [0, 2] },
+        { "id": "tld", "icon": "database", "name": ".com server", "sub": "knows who runs google.com", "cell": [1, 2] },
+        { "id": "google", "icon": "tower", "name": "ns1.google.com", "sub": "knows the address", "cell": [2, 2] }
+      ],
+      "steps": [
+        { "n": 1, "from": "browser", "to": "resolver", "label": "where is google.com?" },
+        { "n": 2, "from": "resolver", "to": "root", "label": "who runs .com?" },
+        { "n": 3, "from": "root", "to": "resolver", "label": "ask the .com servers", "reply": true },
+        { "n": 4, "from": "resolver", "to": "tld", "label": "who runs google.com?" },
+        { "n": 5, "from": "tld", "to": "resolver", "label": "ask ns1.google.com", "reply": true },
+        { "n": 6, "from": "resolver", "to": "google", "label": "where is google.com?" },
+        { "n": 7, "from": "google", "to": "resolver", "label": "142.250.134.100", "reply": true },
+        { "n": 8, "from": "resolver", "to": "browser", "label": "142.250.134.100", "reply": true }
+      ]
+    }
+  ]
+}

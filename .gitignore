@@ -1,0 +1,10 @@
+node_modules/
+out/
+.frames/
+*.gif
+*.mp4
+!assets/*.gif
+tests/.out/
+.DS_Store
+.claude/
+.superpowers/

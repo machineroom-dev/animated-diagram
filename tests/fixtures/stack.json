@@ -1,0 +1,32 @@
+{
+  "canvas": "linkedin-portrait",
+  "template": "stack",
+  "title": "Where a web request goes",
+  "panels": [
+    {
+      "grid": { "cols": 2, "rows": 5 },
+      "nodes": [
+        { "id": "client", "icon": "laptop", "name": "Client", "cell": [0, 0] },
+        { "id": "edge", "icon": "cdn-edge", "name": "CDN edge", "cell": [0, 1] },
+        { "id": "lb", "icon": "load-balancer", "name": "Load balancer", "cell": [0, 2] },
+        { "id": "app", "icon": "rack", "name": "App servers", "cell": [0, 3] },
+        { "id": "db", "icon": "database", "name": "Database", "cell": [0, 4] },
+        { "id": "cache", "icon": "cache", "name": "Cache", "cell": [1, 4] }
+      ],
+      "groups": [
+        { "label": "CLIENT", "nodes": ["client"] },
+        { "label": "EDGE", "nodes": ["edge"] },
+        { "label": "TRAFFIC", "nodes": ["lb"] },
+        { "label": "SERVICE", "nodes": ["app"] },
+        { "label": "DATA", "nodes": ["db", "cache"] }
+      ],
+      "steps": [
+        { "n": 1, "from": "client", "to": "edge", "label": "HTTPS request" },
+        { "n": 2, "from": "edge", "to": "lb", "label": "cache miss: forward" },
+        { "n": 3, "from": "lb", "to": "app", "label": "pick a healthy server" },
+        { "n": 4, "from": "app", "to": "cache", "label": "read hot keys" },
+        { "n": 5, "from": "app", "to": "db", "label": "query on a miss" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "animated-diagram",
+  "private": true,
+  "description": "Turns a system-design topic into a looping animated diagram: GIF, MP4 and PNG.",
+  "license": "MIT",
+  "repository": "github:machineroom-dev/animated-diagram",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "playwright-core": "1.62.1"
+  }
+}

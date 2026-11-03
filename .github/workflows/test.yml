@@ -1,0 +1,28 @@
+name: test
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: google-chrome --version
+      - run: npm ci --prefix skills/animated-diagram
+      - run: npm test
+      - name: Render every example the way a new user would
+        run: |
+          mkdir -p /tmp/try && cd /tmp/try
+          cli="$GITHUB_WORKSPACE/skills/animated-diagram/scripts/cli.mjs"
+          node "$cli" theme --preset light
+          for name in cdn cache-strategies web-stack; do
+            node "$cli" render "$GITHUB_WORKSPACE/skills/animated-diagram/examples/$name.json" --out out/
+          done
+          ls -la out/

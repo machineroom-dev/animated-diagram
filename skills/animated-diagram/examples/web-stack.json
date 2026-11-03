@@ -1,0 +1,32 @@
+{
+  "canvas": "linkedin-portrait",
+  "template": "stack",
+  "title": "Where an order goes",
+  "panels": [
+    {
+      "grid": { "cols": 2, "rows": 5 },
+      "nodes": [
+        { "id": "browser", "icon": "laptop", "name": "Browser", "cell": [0, 0] },
+        { "id": "cdn", "icon": "cdn-edge", "name": "CDN edge", "cell": [0, 1] },
+        { "id": "gw", "icon": "api", "name": "API gateway", "cell": [0, 2] },
+        { "id": "svc", "icon": "container", "name": "Orders service", "cell": [0, 3] },
+        { "id": "db", "icon": "database", "name": "Orders DB", "cell": [0, 4] },
+        { "id": "events", "icon": "queue", "name": "Event queue", "cell": [1, 4] }
+      ],
+      "groups": [
+        { "label": "CLIENT", "nodes": ["browser"] },
+        { "label": "EDGE", "nodes": ["cdn"] },
+        { "label": "GATEWAY", "nodes": ["gw"] },
+        { "label": "SERVICE", "nodes": ["svc"] },
+        { "label": "DATA", "nodes": ["db", "events"] }
+      ],
+      "steps": [
+        { "n": 1, "from": "browser", "to": "cdn", "label": "POST /orders" },
+        { "n": 2, "from": "cdn", "to": "gw", "label": "not cacheable: forward" },
+        { "n": 3, "from": "gw", "to": "svc", "label": "token checked, routed" },
+        { "n": 4, "from": "svc", "to": "db", "label": "INSERT the order" },
+        { "n": 5, "from": "svc", "to": "events", "label": "OrderPlaced event" }
+      ]
+    }
+  ]
+}

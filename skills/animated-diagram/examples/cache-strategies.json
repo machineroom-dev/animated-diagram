@@ -1,0 +1,37 @@
+{
+  "canvas": "linkedin-portrait",
+  "template": "comparison",
+  "title": "Cache-aside vs write-through",
+  "panels": [
+    {
+      "title": "Cache-aside",
+      "grid": { "cols": 1, "rows": 3 },
+      "nodes": [
+        { "id": "cache", "icon": "cache", "name": "Cache", "sub": "filled on demand", "cell": [0, 0] },
+        { "id": "app", "icon": "rack", "name": "App", "sub": "owns the cache logic", "cell": [0, 1] },
+        { "id": "db", "icon": "database", "name": "Database", "sub": "source of truth", "cell": [0, 2] }
+      ],
+      "steps": [
+        { "n": 1, "from": "app", "to": "cache", "label": "GET key" },
+        { "n": 2, "from": "cache", "to": "app", "label": "MISS", "kind": "miss", "reply": true },
+        { "n": 3, "from": "app", "to": "db", "label": "read the row" },
+        { "n": 4, "from": "db", "to": "app", "label": "row, then SET key", "reply": true }
+      ]
+    },
+    {
+      "title": "Write-through",
+      "grid": { "cols": 1, "rows": 3 },
+      "nodes": [
+        { "id": "app", "icon": "rack", "name": "App", "sub": "writes to the cache", "cell": [0, 0] },
+        { "id": "cache", "icon": "cache", "name": "Cache", "sub": "always up to date", "cell": [0, 1] },
+        { "id": "db", "icon": "database", "name": "Database", "sub": "written in the same call", "cell": [0, 2] }
+      ],
+      "steps": [
+        { "n": 1, "from": "app", "to": "cache", "label": "write key" },
+        { "n": 4, "from": "cache", "to": "app", "label": "ack", "kind": "hit", "reply": true },
+        { "n": 2, "from": "cache", "to": "db", "label": "write row" },
+        { "n": 3, "from": "db", "to": "cache", "label": "committed", "reply": true }
+      ]
+    }
+  ]
+}

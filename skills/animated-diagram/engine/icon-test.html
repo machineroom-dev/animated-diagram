@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg id="card" xmlns="http://www.w3.org/2000/svg"></svg>
+<script type="module">
+  // icon-test.html?icon=<name>&theme=<preset>&style=<s> — one icon at 1.15 on a 240×240 panel tile, window.seek(f).
+  // window.grid(cells, { theme, cols, rowLabels?, colLabels? }) — many tiles, each { icon, style, f }, for tests and sheets.
+  import { Scene } from './engine.js';
+  import { ICONS } from './icons/index.js';
+  const NS = 'http://www.w3.org/2000/svg', TILE = 240, SCALE = 1.15;
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); parent.appendChild(e); return e; };
+  const face = new FontFace('InterV', 'url(/fonts/InterVariable.woff2)', { weight: '100 900' });
+  document.fonts.add(await face.load());
+  const preset = async name => (await fetch(`/themes/${name}.json`)).json();
+
+  window.ICON_NAMES = Object.keys(ICONS);
+  window.grid = async (cells, { theme, cols, rowLabels = null, colLabels = null }) => {
+    const svg = document.getElementById('card'), T = theme.colors;
+    svg.innerHTML = '';
+    const left = rowLabels ? 170 : 0, top = colLabels ? 56 : 0, rows = Math.ceil(cells.length / cols);
+    const w = left + cols * TILE, h = top + rows * TILE;
+    for (const [k, v] of Object.entries({ width: w, height: h, viewBox: `0 0 ${w} ${h}`, 'font-family': `'${theme.font.family}', sans-serif` })) svg.setAttribute(k, v);
+    el('rect', { width: w, height: h, fill: T.bg }, svg);
+    if (colLabels) colLabels.forEach((s, i) => { const t = el('text', { x: left + (i + 0.5) * TILE, y: 36, 'text-anchor': 'middle', 'font-size': 20, 'font-weight': 600, fill: T.ink }, svg); t.textContent = s; });
+    if (rowLabels) rowLabels.forEach((s, i) => { const t = el('text', { x: 24, y: top + (i + 0.5) * TILE + 8, 'font-size': 24, 'font-weight': 640, fill: T.ink }, svg); t.textContent = s; });
+    const scenes = cells.map((c, i) => {
+      const g = el('g', { transform: `translate(${left + (i % cols) * TILE} ${top + Math.floor(i / cols) * TILE})` }, svg);
+      el('rect', { width: TILE, height: TILE, fill: T.panel, ...(rowLabels ? { stroke: T.panelStroke, 'stroke-width': 1 } : {}) }, g);
+      const scene = new Scene(g, theme, 1, { style: c.style });
+      scene.icon(c.icon, `c${i}`, TILE / 2, TILE / 2, SCALE);
+      scene.seek(c.f);
+      return scene;
+    });
+    await document.fonts.ready;
+    return { w, h, scenes };
+  };
+  // For every icon × style: the fill / stroke attributes the style set at f0 must survive every loop frame.
+  window.styleDrift = async (names, theme) => {
+    const drift = [];
+    for (const icon of names) for (const style of ['filled', 'line', 'duotone']) {
+      const { scenes: [scene] } = await window.grid([{ icon, style, f: 0 }], { theme, cols: 1 });
+      const els = [...document.querySelectorAll('[data-icon] *')];
+      const snap = () => els.map(e => ['fill', 'stroke', 'stroke-width'].map(a => e.getAttribute(a)).join('|'));
+      const base = snap();
+      for (let f = 1; f < 90; f += 2) {
+        scene.seek(f);
+        snap().forEach((v, i) => { if (v !== base[i]) drift.push(`${icon}/${style} f${f}: <${els[i].tagName} id=${els[i].id}> ${base[i]} → ${v}`); });
+      }
+    }
+    return [...new Set(drift)].slice(0, 40);
+  };
+  const q = new URLSearchParams(location.search);
+  if (q.get('icon')) {
+    const { scenes: [scene] } = await window.grid([{ icon: q.get('icon'), style: q.get('style') || 'filled', f: 0 }], { theme: await preset(q.get('theme') || 'light'), cols: 1 });
+    window.seek = f => scene.seek(f);
+  }
+  window.ENGINE_LOADED = true;
+</script>
+</body>
+</html>

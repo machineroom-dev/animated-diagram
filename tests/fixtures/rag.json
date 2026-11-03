@@ -1,0 +1,49 @@
+{
+  "canvas": "linkedin-portrait",
+  "template": "comparison",
+  "title": "RAG vs Agentic RAG",
+  "panels": [
+    {
+      "title": "RAG",
+      "grid": { "cols": 1, "rows": 5 },
+      "nodes": [
+        { "id": "user", "icon": "user", "name": "User", "sub": "asks a question", "cell": [0, 0] },
+        { "id": "index", "icon": "database", "name": "Vector index", "sub": "top-k similar chunks", "cell": [0, 1] },
+        { "id": "prompt", "type": "text", "name": "Prompt Builder", "cell": [0, 2] },
+        { "id": "llm", "icon": "llm-chip", "name": "LLM", "cell": [0, 3] },
+        { "id": "answer", "icon": "document", "name": "Answer", "sub": "one pass, no checks", "cell": [0, 4] }
+      ],
+      "steps": [
+        { "n": 1, "from": "user", "to": "index", "label": "embed + search" },
+        { "n": 2, "from": "index", "to": "prompt", "label": "top-k chunks" },
+        { "n": 3, "from": "prompt", "to": "llm", "label": "prompt + context" },
+        { "n": 4, "from": "llm", "to": "answer", "label": "generate" }
+      ]
+    },
+    {
+      "title": "Agentic RAG",
+      "grid": { "cols": 1, "rows": 5 },
+      "nodes": [
+        { "id": "tools", "type": "tray", "name": "Tools & Retrieval Sources", "cell": [0, 0],
+          "items": [
+            { "icon": "database", "caption": "Vector DB" },
+            { "icon": "document", "caption": "Docs" },
+            { "icon": "api", "caption": "Web APIs" },
+            { "icon": "code-window", "caption": "Code" }
+          ] },
+        { "id": "orch", "type": "text", "name": "Agent Orchestrator", "cell": [0, 1] },
+        { "id": "llm", "icon": "llm-chip", "name": "LLM", "cell": [0, 2] },
+        { "id": "eval", "type": "text", "name": "Evaluator Agent", "cell": [0, 3] },
+        { "id": "answer", "icon": "document", "name": "Answer", "sub": "grounded, checked", "cell": [0, 4] }
+      ],
+      "steps": [
+        { "n": 1, "from": "orch", "to": "tools", "label": "plan + call tools" },
+        { "n": 2, "from": "tools", "to": "orch", "label": "retrieved context", "reply": true },
+        { "n": 3, "from": "orch", "to": "llm", "label": "prompt + context" },
+        { "n": 4, "from": "llm", "to": "eval", "label": "draft answer" },
+        { "n": 5, "from": "eval", "to": "orch", "label": "not grounded: retry", "kind": "retry" },
+        { "n": 6, "from": "eval", "to": "answer", "label": "passes the check", "kind": "hit" }
+      ]
+    }
+  ]
+}
