@@ -92,4 +92,4 @@ Tested on macOS and Linux.
 
 MIT. The bundled Inter font is under the SIL Open Font License (`skills/animated-diagram/fonts/OFL.txt`).
 
-Made by [Machine Room](https://themachineroom.dev), explainers on how software works.
+Made by [Machine Room](https://themachineroom.dev), explainers on how software works. [Get the next free skill by email](https://themachineroom.dev/skills/animated-diagram/?utm_source=github&utm_medium=readme&utm_campaign=animated-diagram).
