@@ -5,28 +5,15 @@
 import { measureNode, drawNode } from './nodes.js';
 import { TYPE } from './engine.js';
 import { route, routePair, edgeX, crosses, END, CLEAR } from './route.js';
+import { rowTracks, assignZones, labelStyle, pairSteps, isShort } from './grid.js';
+
+export { pairSteps };
 
 const INNER = 56;           // panel inner margin
-const EDGE = 0.25;          // a panel edge gets this share of a gap between rows (0 = rows touch the edges)
 const PAIR = 20;           // a pair's lines sit ±20 off the centre line
 const LABEL = { side: 22, above: 22, below: 30, clear: 8, band: 26, edge: 24 };   // labels may run to 24 inside the frame
 const GROUP = { pad: 24, title: 30, r: 18, sw: 2.2, tx: 24, ty: 34 };
 const BAND = { pad: 16, r: 16, sw: 2.4, tx: 20, ty: 26 };
-
-const LABEL_STYLE = { hit: ['hitText', 640], miss: ['missText', 640], retry: ['missText', 640] };
-
-// Which steps pair up: a step whose from/to swap an earlier unpaired step's. The reply is the one marked reply: true,
-// else the later one. Returns, per step index, { role: 'single' | 'request' | 'reply', partner }.
-export function pairSteps(steps) {
-  const out = steps.map(() => ({ role: 'single', partner: null }));
-  steps.forEach((s, i) => {
-    const j = steps.findIndex((t, jj) => jj < i && out[jj].role === 'single' && t.from === s.to && t.to === s.from);
-    if (j < 0) return;
-    const [req, rep] = steps[j].reply && !s.reply ? [i, j] : [j, i];
-    out[req] = { role: 'request', partner: rep }; out[rep] = { role: 'reply', partner: req };
-  });
-  return out;
-}
 
 const overlapsY = (b, y0, y1) => b.y < y1 && b.y + b.h > y0;
 
@@ -66,13 +53,6 @@ function bentLabel(points, bounds, walls, k, partner = null) {
   return { x: mx, y: my - LABEL.above * k, side: 'center', grow: 'up' };
 }
 
-// Hands each group (or stack band) its zone: its own colour, else the next in the theme's order that nothing has claimed.
-function assignZones(scene, groups) {
-  const taken = new Set(groups.map(g => g.color).filter(Boolean)), free = scene.zoneOrder.filter(z => !taken.has(z));
-  let next = 0;
-  return groups.map(g => scene.zones[g.color ?? free[next++ % free.length]]);
-}
-
 // An arrow's segments as thin boxes, so later labels keep off them.
 const segmentBoxes = points => points.slice(1).map((q, i) => { const p = points[i]; return { x: Math.min(p[0], q[0]), y: Math.min(p[1], q[1]), w: Math.max(Math.abs(q[0] - p[0]), 0.01), h: Math.max(Math.abs(q[1] - p[1]), 0.01) }; });
 
@@ -95,21 +75,8 @@ export function layoutPanel(panel, frame, ctx) {
     if (r === Math.max(...g.rows)) extraBottom.set(id, GROUP.pad * k);
   }
 
-  // Rows: each row's anchor sits below its tallest top part; the free height is shared by the gaps between rows,
-  // with a quarter-gap at each panel edge (the spike's spread), so no band outgrows a row.
   const m = new Map(panel.nodes.map(n => [n.id, measureNode(n, nctx)]));
-  const up = Array(rows).fill(0), down = Array(rows).fill(0), used = Array(rows).fill(false);
-  for (const n of panel.nodes) {
-    const r = n.cell[1], mm = m.get(n.id);
-    used[r] = true;
-    up[r] = Math.max(up[r], mm.ay + (extraTop.get(n.id) ?? 0));
-    down[r] = Math.max(down[r], mm.h - mm.ay + (extraBottom.get(n.id) ?? 0));
-  }
-  const content = up.reduce((s, v, i) => s + v + down[i], 0), spare = inner.h - content;
-  const gaps = rows - 1 + 2 * EDGE, gap = rows > 1 ? (inner.h - content) / gaps : 0;
-  const rowY = [];
-  let y = rows > 1 ? inner.y + EDGE * gap : inner.y + (inner.h - content) / 2;
-  for (let r = 0; r < rows; r++) { rowY.push(y + up[r]); y += up[r] + down[r] + gap; }
+  const { up, down, used, spare, rowY } = rowTracks(panel.nodes, rows, m, extraTop, extraBottom, inner);
   const colX = c => inner.x + (c + 0.5) * cellW;
   const slotX = new Map();                    // stack: a row's nodes, in column order, spread evenly across the frame
   if (stack) for (let r = 0; r < rows; r++) {
@@ -204,10 +171,10 @@ export function layoutPanel(panel, frame, ctx) {
       const below = role === 'reply';
       lab = { x: (x0 + x1) / 2, y: below ? yl + LABEL.below * k : yl - LABEL.above * k, side: 'center', grow: below ? 'down' : 'up' };
     }
-    const short = role === 'reply' || (role === 'single' && s.reply === true) || kind === 'retry';
+    const short = isShort(s, role);
     let labelId = null;
     if (s.label) {
-      const [fillTok, weight] = LABEL_STYLE[kind] ?? (s.n === undefined ? ['muted', 480] : ['ink', TYPE.step[1]]);
+      const [fillTok, weight] = labelStyle(s);
       labelId = scene.label({ n: s.n, text: s.label, x: lab.x, y: lab.y, side: lab.side, grow: lab.grow,
         maxWidth: room(lab.x, lab.y, lab.side, bounds, walls, k), fill: groundAt(lab.x, lab.y)?.[fillTok] ?? T[fillTok], weight, owner: id, panel: prefix });
     }
