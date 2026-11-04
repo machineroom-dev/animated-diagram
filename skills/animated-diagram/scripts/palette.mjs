@@ -51,7 +51,7 @@ export function themeFromBrand({ primary, accent, mode, name }) {
   const t = loadTheme(mode === 'dark' ? 'dark' : 'light'), C = t.colors;
   primary = primary.toUpperCase();
   t.name = name;
-  Object.assign(C, { primary, head: primary, sideA: primary, accent: (accent ?? primary).toUpperCase(), groupText: primary });
+  Object.assign(C, { primary, sideA: primary, accent: (accent ?? primary).toUpperCase(), groupText: primary });
   const [h, s, l] = toHsl(primary);
   C.primaryDark = fromHsl([h, s, Math.max(0, l - 0.18)]);
   C.tint = mode === 'dark' ? mix(C.panel, primary, 0.22) : mix('#FFFFFF', primary, 0.12);

@@ -4,7 +4,8 @@
 
 - **flow-grid** — one panel, nodes on a grid, numbered steps between them, optional groups and HIT/MISS branches.
   The default for "how X works". Best at 2 columns × 3 rows (`examples/cdn.json`); 3 columns fit short names.
-- **comparison** — two panels side by side under "A vs B" pills, each in its side colour (`examples/cache-strategies.json`).
+- **comparison** — two panels side by side under one headline, "A vs B", with each name in its side colour
+  (`examples/cache-strategies.json`).
   Each panel is only ~490 px wide: use **1 column** and 3–5 rows, and text boxes (`"type": "text"`) for roles like
   "Prompt Builder". A tray needs a row of its own.
 - **stack** — horizontal layers top to bottom (client → edge → service → data), each row a labelled band, its nodes
@@ -31,8 +32,8 @@
 |---|---|---|
 | `UNROUTABLE` | a step can't be drawn inside the envelope | move a cell so the step joins neighbours or has a free corner |
 | `TEXT_OUT_OF_CANVAS`, `TEXT_OUT_OF_PANEL` | a text runs off the card or out of its panel | shorten the label or name; move the node inward |
-| `TEXT_OUT_OF_PILL` | the headline (or a comparison panel's title) is wider than its pill | shorten the title |
-| `LABEL_OVERLAP` | two texts touch | shorten one, or move a node to give the label room |
+| `TITLE_TOO_WIDE` | the headline is wider than the card (about 36 characters at 1080 wide) | shorten the title, or a comparison panel's title |
+| `LABEL_OVERLAP` | two texts touch (a subtitle running into the brand counts) | shorten one, or move a node to give the label room |
 | `LABEL_ON_ICON` | a text lies on a node | move the node (or drop its `offset`), shorten the label |
 | `LABEL_ON_ARROW` | a text crosses another step's arrow | move the node so the arrows separate, or shorten the label |
 | `ARROW_THROUGH_NODE` | an arrow passes through a node | rearrange cells so the step's path is clear |

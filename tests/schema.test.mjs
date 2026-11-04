@@ -51,6 +51,14 @@ test('required fields and enums', () => {
   failsWith('cdn', d => { d.grid = d.panels[0].grid; }, 'grid: unknown field');
 });
 
+test('subtitle is an optional non-empty string', () => {
+  const d = fixture('cdn');
+  d.subtitle = 'From the browser to the edge, and back';
+  assert.deepEqual(validateDiagram(d, { icons }), { ok: true, errors: [] });
+  failsWith('cdn', x => { x.subtitle = ''; }, 'subtitle: must be a non-empty string');
+  failsWith('cdn', x => { x.subtitle = 3; }, 'subtitle: must be a non-empty string');
+});
+
 test('cells sit inside the grid and are unique', () => {
   failsWith('cdn', d => { d.panels[0].nodes[1].cell = [2, 0]; }, 'panels[0].nodes[1].cell: [2, 0] is outside the 2×3 grid');
   failsWith('cdn', d => { d.panels[0].nodes[1].cell = [0, 0]; }, 'panels[0].nodes[1].cell: [0, 0] is already taken by "user"');

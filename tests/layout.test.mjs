@@ -18,11 +18,11 @@ const boot = (diagram, th = 'machine-room-dark') => page.evaluate(async ([d, t])
     labels: window.scene.labels.map(l => ({ id: l.id, lines: l.lines, box: l.box, overflow: l.overflow, text: l.text })) };
 }, [diagram, theme(th)]);
 
-test('cdn lays out like the spike', async () => {
+test('cdn keeps its layout', async () => {
   const r = await boot(fixture('cdn'));
-  const want = [[300, 262], [780, 262], [300, 672], [780, 672], [300, 1082], [780, 1082]];
+  const want = [[316, 291], [764, 291], [316, 722], [764, 722], [316, 1098], [764, 1098]];
   assert.equal(r.nodes.length, 6);
-  r.nodes.forEach((n, i) => assert.ok(Math.hypot(n.cx - want[i][0], n.cy - want[i][1]) <= 40, `${n.id} at (${n.cx.toFixed(1)}, ${n.cy.toFixed(1)}), spike (${want[i]})`));
+  r.nodes.forEach((n, i) => assert.ok(Math.hypot(n.cx - want[i][0], n.cy - want[i][1]) <= 40, `${n.id} at (${n.cx.toFixed(1)}, ${n.cy.toFixed(1)}), expected (${want[i]})`));
 });
 
 test('pairs', async () => {

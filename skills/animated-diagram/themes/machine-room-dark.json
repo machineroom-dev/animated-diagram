@@ -34,14 +34,10 @@
     "badgeText": "#0B1012",
     "accent": "#C6F73F",
     "brand": "#7A8B8E",
-    "head": "#C6F73F",
-    "headText": "#0B1012",
     "groupText": "#8FA9F5",
     "sideA": "#4169E1",
-    "sideAText": "#FFFFFF",
     "sideATint": "#141C1F",
     "sideB": "#C6F73F",
-    "sideBText": "#0B1012",
     "sideBTint": "#141C1F"
   }
 }

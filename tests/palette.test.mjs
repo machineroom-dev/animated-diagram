@@ -26,7 +26,7 @@ test('palette is deterministic', async () => {
 test('themeFromBrand dark passes checkTheme', () => {
   const t = themeFromBrand({ primary: '#FF3366', mode: 'dark', name: 'brand-dark' });
   assert.equal(t.colors.primary, '#FF3366');
-  assert.equal(t.colors.head, '#FF3366');
+  assert.equal(t.colors.sideA, '#FF3366');
   assert.deepEqual(checkTheme(t).failures, []);
 });
 

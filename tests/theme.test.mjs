@@ -20,9 +20,16 @@ test('every preset loads and passes checkTheme', () => {
 });
 
 test('the pairs and tokens are the agreed sets', () => {
-  assert.equal(TOKENS.length, 31);   // the spike's 24 + groupText and the six side tokens
-  assert.equal(TEXT_PAIRS.length, 21);
+  assert.equal(TOKENS.length, 27);   // no pills any more, so no head, headText, sideAText or sideBText
+  assert.equal(TEXT_PAIRS.length, 18);
   for (const [fg, bg] of TEXT_PAIRS) assert.ok(TOKENS.includes(fg) && TOKENS.includes(bg));
+});
+
+test('a theme file that still has the retired pill tokens loads and passes', () => {
+  const t = loadTheme('dark');
+  Object.assign(t.colors, { head: '#7C4DEB', headText: '#FFFFFF', sideAText: '#FFFFFF', sideBText: '#111318' });
+  const again = loadTheme(tmpTheme(t));
+  assert.deepEqual(checkTheme(again).failures, []);
 });
 
 test('every text colour is checked on each ground it is drawn on', () => {

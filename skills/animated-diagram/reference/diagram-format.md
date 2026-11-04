@@ -9,7 +9,8 @@ Unknown fields are errors too, so a typo never passes silently.
   "canvas": "linkedin-portrait",
   "template": "flow-grid",
   "title": "How a CDN serves a request",
-  "footer": "optional — overrides the theme's brand footer",
+  "subtitle": "optional — one line under the headline",
+  "footer": "optional — overrides the theme's brand text",
   "still": 45,
   "panels": [
     {
@@ -34,8 +35,9 @@ Unknown fields are errors too, so a typo never passes silently.
 |---|---|---|
 | `canvas` | optional | `linkedin-portrait` 1080×1350 (default), `square` 1080×1080, `landscape` 1200×675 |
 | `template` | required | `flow-grid`, `comparison` or `stack` (see `templates.md`) |
-| `title` | flow-grid, stack | the headline in the top band; a comparison's headline is its two panel titles |
-| `footer` | optional | footer text; default `theme.brand.footer` |
+| `title` | flow-grid, stack | the headline, big plain type at the top of the card; a comparison's headline is its two panel titles, "A vs B" |
+| `subtitle` | optional | one muted line under the headline; keep it short, it shares its row with the brand |
+| `footer` | optional | the brand text at the right of the subtitle's row; default `theme.brand.footer` |
 | `still` | optional | the frame (0–89) saved as the PNG; default 45 |
 | `panels` | required | flow-grid and stack: exactly 1; comparison: exactly 2, each with a `title` |
 
@@ -44,7 +46,7 @@ Over the cap is a `FILE_SIZE` failure; over the 1 MB budget (scaled by area) is 
 
 ## Panel
 
-- `title` — the pill over a comparison panel.
+- `title` — a comparison panel's name: part of the headline, and a small caption in the panel.
 - `grid` — `{ "cols": 1–4, "rows": 1–6 }`. Columns share the panel's width equally; rows spread to fill its height.
 - `nodes` — at least one. Each sits in its own `[col, row]` cell, counted from 0.
 - `groups` — optional `{ "label", "nodes": [ids] }`: a box around the members with its title in the top-right

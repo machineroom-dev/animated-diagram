@@ -20,6 +20,12 @@ test('constants', async () => {
   assert.deepEqual(c, { FRAMES: 90, PL: 30.70, PS: 15.35, DL: 15, DS: 7.1, V: 8 * 30.70 / 90, ARM: 10, CORNER_R: 11.5, BADGE_R: 15.5 });
 });
 
+test('a scene derives the zone palette from its theme', async () => {
+  const r = await inScene((E, scene) => ({ teal: scene.zones.teal.fill, first: scene.zoneOrder[0] }));
+  assert.match(r.teal, /^#[0-9A-F]{6}$/);
+  assert.equal(r.first, 'primary');
+});
+
 test('dash march is seamless', async () => {
   const [o0, o90, PL] = await inScene((E, scene) => {
     scene.arrow('a', [[100, 100], [400, 100]]);

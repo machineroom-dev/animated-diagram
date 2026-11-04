@@ -17,7 +17,7 @@ export const NODE_TYPES = ['icon', 'text', 'tray'];
 export const KINDS = ['normal', 'hit', 'miss', 'retry', 'solid'];
 const PANELS = { 'flow-grid': 1, comparison: 2, stack: 1 };
 const FIELDS = {
-  diagram: ['canvas', 'template', 'title', 'footer', 'still', 'panels'],
+  diagram: ['canvas', 'template', 'title', 'subtitle', 'footer', 'still', 'panels'],
   panel: ['title', 'grid', 'nodes', 'groups', 'steps'],
   grid: ['cols', 'rows'],
   node: ['id', 'type', 'icon', 'name', 'sub', 'cell', 'items', 'offset'],
@@ -91,6 +91,7 @@ export function validateDiagram(d, { icons }) {
   const tpl = TEMPLATES.includes(d.template) ? d.template : null;
   if (d.title === undefined) { if (tpl && tpl !== 'comparison') err('title', `required for a ${tpl} diagram (the headline)`); }
   else if (!isStr(d.title)) err('title', 'must be a non-empty string');
+  if (d.subtitle !== undefined && !isStr(d.subtitle)) err('subtitle', 'must be a non-empty string');
   if (d.footer !== undefined && typeof d.footer !== 'string') err('footer', 'must be a string');
   if (d.still !== undefined && !isInt(d.still, 0, 89)) err('still', 'must be an integer from 0 to 89 (the frame used for the PNG)');
   if (!Array.isArray(d.panels)) { err('panels', 'must be a list of panels'); return { ok: false, errors }; }

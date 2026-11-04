@@ -2,6 +2,7 @@
   "canvas": "linkedin-portrait",
   "template": "comparison",
   "title": "Cache-aside vs write-through",
+  "subtitle": "Who fills the cache, and when",
   "panels": [
     {
       "title": "Cache-aside",

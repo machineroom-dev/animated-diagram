@@ -14,7 +14,11 @@ const boot = (diagram, th = 'machine-room-dark') => page.evaluate(async ([d, t])
   const res = await window.boot(d, t, { style: 'filled', localIcons: [] });
   const c = window.composition;
   const panelRects = [...document.querySelectorAll('[data-layer=back] rect[data-panel]')].map(r => ({ fill: r.getAttribute('fill'), stroke: r.getAttribute('stroke') }));
-  return { res, band: { pills: c.band.pills, vs: c.band.vs }, panelRects, colors: t.colors,
+  const box = e => { if (!e) return null; const b = e.getBBox(); return { x: b.x, y: b.y, w: b.width, h: b.height, text: e.textContent, baseline: +e.getAttribute('y'), fill: e.getAttribute('fill'), size: +e.getAttribute('font-size') }; };
+  const runs = [...(c.header.title?.querySelectorAll('tspan') ?? [])].map(s => ({ text: s.textContent, fill: s.getAttribute('fill') }));
+  const backRects = [...document.querySelectorAll('[data-layer=back] rect')].length;
+  return { res, header: { title: box(c.header.title), subtitle: box(c.header.subtitle), brand: box(c.header.brand), dot: !!c.header.dot, runs }, backRects, panelRects, colors: t.colors,
+    texts: window.scene.texts.map(x => ({ role: x.role, text: x.el.textContent, fill: x.el.getAttribute('fill'), y: x.el.getBBox().y })),
     panels: c.panels.map(p => ({ frame: p.frame, bands: p.bands, nodes: p.layout.nodes.map(n => ({ id: n.id, cx: n.cx, cy: n.cy, cell: n.cell, box: n.box })), arrows: p.layout.arrows })) };
 }, [diagram, theme(th)]);
 
@@ -25,14 +29,56 @@ test('rag composes', async () => {
   assert.ok(Math.abs(A.w - B.w) < 0.5, `widths ${A.w} ${B.w}`);
   assert.ok(Math.abs(B.x - (A.x + A.w) - 20) < 0.5, 'a 20k gap');
   assert.ok(Math.abs(A.x - 36) < 0.5 && Math.abs(1080 - (B.x + B.w) - 36) < 0.5, '36k outer margins');
-  assert.equal(r.band.pills.length, 2);
-  r.band.pills.forEach((pill, i) => {
-    const f = r.panels[i].frame;
-    assert.ok(Math.abs(pill.x + pill.w / 2 - (f.x + f.w / 2)) <= 2, `pill ${i} centred`);
-    assert.ok(Math.abs(pill.w - 0.74 * f.w) < 0.5, `pill ${i} is 0.74 of its panel`);
-  });
-  assert.ok(r.band.vs, 'a "vs" between the pills');
   assert.equal(r.panels[1].arrows.find(a => a.kind === 'retry').points.length, 4);
+});
+
+test('the headline is plain type at the panel edge, with no shape behind it', async () => {
+  const r = await boot(fixture('cdn')), f = r.panels[0].frame;
+  assert.equal(r.backRects, 2, 'only the card and the panel: no pill, no accent bar');
+  assert.equal(r.header.title.text, 'How a CDN serves a request');
+  assert.ok(Math.abs(r.header.title.x - f.x) <= 4, `title x ${r.header.title.x} against the panel's ${f.x}`);
+  assert.ok(r.header.title.size >= 50, `title size ${r.header.title.size}`);
+  assert.equal(r.header.title.fill, r.colors.ink);
+  assert.ok(r.header.title.y + r.header.title.h <= f.y, 'the title is above the panel');
+});
+
+test('the brand sits at the right of the subtitle row and nothing sits under the panel', async () => {
+  const d = fixture('cdn');
+  d.subtitle = 'From the browser to the edge, and back';
+  const r = await boot(d), f = r.panels[0].frame;
+  assert.equal(r.header.subtitle.text, d.subtitle);
+  assert.equal(r.header.brand.text, 'Machine Room');
+  assert.equal(r.header.brand.baseline, r.header.subtitle.baseline, 'one row');
+  assert.ok(Math.abs(r.header.brand.x + r.header.brand.w - (f.x + f.w)) <= 2, 'the brand ends at the panel edge');
+  assert.ok(r.header.dot, 'the accent dot');
+  assert.ok(Math.abs(f.y + f.h - (1350 - 36)) < 0.5, 'the panel runs to a 36k margin');
+  assert.deepEqual(r.texts.filter(t => t.y > f.y + f.h), [], 'no footer');
+});
+
+test('the subtitle is optional and the brand keeps its row without it', async () => {
+  const r = await boot(fixture('cdn'));
+  assert.equal(r.header.subtitle, null);
+  assert.ok(r.header.brand.baseline > r.header.title.baseline, 'the brand stays on the second row');
+  assert.deepEqual(r.res.failures, []);
+});
+
+test('a diagram\'s footer field still overrides the theme\'s brand text', async () => {
+  const d = fixture('cdn');
+  d.footer = 'Acme Corp';
+  assert.equal((await boot(d)).header.brand.text, 'Acme Corp');
+});
+
+test('a comparison\'s headline names both sides in their colours, and each panel carries a caption', async () => {
+  const r = await boot(fixture('rag')), C = r.colors;
+  assert.equal(r.header.title.text, 'RAG vs Agentic RAG');
+  assert.deepEqual(r.header.runs.map(x => x.text), ['RAG', ' vs ', 'Agentic RAG']);
+  const [a, vs, b] = r.header.runs.map(x => x.fill);
+  assert.notEqual(a, b);
+  assert.notEqual(vs, C.ink);
+  const { contrast } = await import('../skills/animated-diagram/scripts/colour.mjs');
+  for (const fg of [a, vs, b]) assert.ok(contrast(fg, C.bg) >= 4.5, `${fg} on ${C.bg}`);
+  const caps = r.texts.filter(t => t.role === 'caption-side').map(t => t.text);
+  assert.deepEqual(caps, ['RAG', 'AGENTIC RAG']);
 });
 
 test('comparison panels take the side colours', async () => {

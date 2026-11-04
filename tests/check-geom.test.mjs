@@ -80,16 +80,30 @@ test('a label overlapping another gives LABEL_OVERLAP, and text off the card TEX
   assert.ok(f.some(x => x.code === 'TEXT_OUT_OF_CANVAS' && x.ids.includes('user')), JSON.stringify(f));
 });
 
-test('a title wider than its pill gives TEXT_OUT_OF_PILL', async () => {
+test('a headline wider than the card gives TITLE_TOO_WIDE', async () => {
   const rag = fixture('rag');
-  rag.panels[1].title = 'Write-behind caching';
+  rag.panels[1].title = 'Write-behind caching with a lot more words in its name';
   const f = await failures(rag);
-  assert.ok(f.some(x => x.code === 'TEXT_OUT_OF_PILL' && x.ids.includes('pillB')), JSON.stringify(f, null, 1));
+  assert.ok(f.some(x => x.code === 'TITLE_TOO_WIDE' && x.ids.includes('header')), JSON.stringify(f, null, 1));
   const cdn = fixture('cdn');
   cdn.title = 'How a content delivery network serves every request it gets';
   const g = await failures(cdn);
-  assert.ok(g.some(x => x.code === 'TEXT_OUT_OF_PILL' && x.ids.includes('band')), JSON.stringify(g, null, 1));
-  assert.deepEqual(await failures(fixture('rag')), [], 'the fixture\'s own pills fit');
+  assert.ok(g.some(x => x.code === 'TITLE_TOO_WIDE' && x.ids.includes('header')), JSON.stringify(g, null, 1));
+  assert.deepEqual(await failures(fixture('rag')), [], 'the fixture\'s own headline fits');
+});
+
+test('a subtitle that runs into the brand gives LABEL_OVERLAP', async () => {
+  const cdn = fixture('cdn');
+  cdn.subtitle = 'From the browser to the edge and back again, with a long way round through the origin';
+  const f = await failures(cdn);
+  assert.ok(f.some(x => x.code === 'LABEL_OVERLAP' && x.ids.includes('subtitle') && x.ids.includes('brand')), JSON.stringify(f, null, 1));
+});
+
+test('header text is not held to the panel', async () => {
+  const cdn = fixture('cdn');
+  cdn.subtitle = 'From the browser to the edge, and back';
+  const f = await failures(cdn);
+  assert.deepEqual(f, []);
 });
 
 test('a hub with bent request and reply pairs passes', async () => {

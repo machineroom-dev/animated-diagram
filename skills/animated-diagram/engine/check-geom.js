@@ -5,7 +5,7 @@
 import { crosses } from './route.js';
 
 const TOL = 2;                                  // overlaps up to 2 px are anti-aliasing, not collisions
-const MIN_TEXT = 13, CANVAS_INSET = 16, PANEL_INSET = 12, PILL_INSET = 16;
+const MIN_TEXT = 13, CANVAS_INSET = 16, PANEL_INSET = 12;
 
 const bbox = el => { const b = el.getBBox(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
 const inside = (b, f, m) => b.x >= f.x + m - 0.5 && b.y >= f.y + m - 0.5 && b.x + b.w <= f.x + f.w - m + 0.5 && b.y + b.h <= f.y + f.h - m + 0.5;
@@ -21,7 +21,7 @@ export function checkGeometry(composition, canvas, k, scene) {
   // Every piece of text: node names and the rest from scene.texts, step labels (badge included) from scene.labels.
   const items = [];
   for (const t of scene.texts) {
-    const inPanel = !['title', 'footer'].includes(t.role);
+    const inPanel = !['title', 'subtitle', 'brand'].includes(t.role);
     items.push({ owner: t.owner, what: t.role === 'group' ? `the group title "${t.el.textContent}"` : `"${t.el.textContent}"`, box: bbox(t.el), size: t.size, panel: inPanel ? panelOf(t.owner) : null, step: false });
   }
   for (const L of scene.labels) if (L.box) items.push({ owner: L.owner, what: `the label "${L.text}"`, box: L.box, size: L.size, panel: panelOf(L.owner), step: true });
@@ -36,13 +36,11 @@ export function checkGeometry(composition, canvas, k, scene) {
     if (it.panel && !inside(it.box, it.panel.frame, PANEL_INSET * k)) fail('TEXT_OUT_OF_PANEL', [it.owner], `${it.what} runs outside panel ${it.panel.name} — shorten it or move its node`);
   }
 
-  // Headlines: each title must fit its pill.
-  const band = composition.band ?? {};
-  const pills = band.pills ? band.pills.map((p, i) => [p, band.titles[i], `pill${'AB'[i]}`, `panels[${i}].title`]) : band.title ? [[band.pill, band.title, 'band', 'title']] : [];
-  for (const [box, el, id, field] of pills) {
-    if (!el) continue;
-    const b = bbox(el), room = box.w - 2 * PILL_INSET * k;
-    if (b.x < box.x + PILL_INSET * k - 0.5 || b.x + b.w > box.x + box.w - PILL_INSET * k + 0.5) fail('TEXT_OUT_OF_PILL', [id], `${field} "${el.textContent}" is ${px(b.w)} wide but its pill holds ${px(room)} — shorten it`);
+  // The headline must fit the card: it starts at the panel's left edge and may run to its right edge.
+  const head = composition.header;
+  if (head?.title) {
+    const b = bbox(head.title), room = head.right - b.x;
+    if (b.w > room + 0.5) fail('TITLE_TOO_WIDE', ['header'], `the headline "${head.title.textContent}" is ${px(b.w)} wide but the card holds ${px(room)} — shorten it`);
   }
 
   for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {

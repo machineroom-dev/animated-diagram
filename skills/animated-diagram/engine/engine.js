@@ -2,6 +2,7 @@
 // Every px value is at canvas width 1080 and is multiplied by k = canvas width / 1080.
 import { ICONS } from './icons/index.js';
 import { applyStyle } from './styles.js';
+import { zoneStyles, zoneOrder } from '../scripts/colour.mjs';
 
 export const FRAMES = 90;
 export const PL = 30.70, PS = 15.35;          // dash periods: long (requests), short (replies, retries)
@@ -9,8 +10,8 @@ export const DL = 15, DS = 7.1;               // dash lengths
 export const V = 8 * PL / FRAMES;             // 8 long periods per loop, so the march is seamless
 export const ARM = 10, CORNER_R = 11.5, BADGE_R = 15.5;
 export const TYPE = {                         // size / weight at 1080 wide
-  title: [38, 780], name: [25, 640], sub: [15.5, 450], step: [17.5, 520], badge: [16.5, 650], group: [15, 760],
-  box: [19, 640], trayTitle: [20, 650], caption: [13.5, 430], footer: [20, 560], vs: [44, 740],
+  title: [54, 800], subtitle: [24, 460], brand: [20, 560], name: [25, 640], sub: [15.5, 450], step: [17.5, 520], badge: [16.5, 650],
+  group: [15, 760], box: [19, 640], trayTitle: [20, 650], caption: [13.5, 430],
 };
 export const LINE_STEP = 1.26;                // two-line labels: baseline step = 1.26 × size
 
@@ -65,6 +66,7 @@ export class Scene {
   constructor(svgEl, theme, k, opts = {}) {
     this.svg = svgEl; this.theme = theme; this.T = theme.colors; this.k = k;
     this.style = opts.style ?? theme.style ?? 'filled';
+    this.zones = zoneStyles(theme); this.zoneOrder = zoneOrder(theme);
     this.icons = { ...ICONS, ...(opts.localIcons ?? {}) };              // a project's own icon wins over the library's
     this.marching = []; this.placed = []; this.labels = []; this.texts = []; this.arrows = [];
     svgEl.setAttribute('font-family', `'${theme.font.family}', sans-serif`);
