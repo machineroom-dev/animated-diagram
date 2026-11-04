@@ -2,7 +2,8 @@
 // name; tray: a titled box of small captioned icons. measureNode() sizes a node before placement, drawNode() draws it.
 //   (cx, cy) is the node's anchor: the icon centre for an icon node, the box centre for a text box or tray.
 //   measureNode().ay is the anchor's distance below the block's top, so a layout can centre the whole block.
-//   ctx = { scene, theme, k, cellW, cellH, side?: 'A' | 'B', prefix?: string (makes element ids unique per panel) }
+//   ctx = { scene, theme, k, cellW, cellH, side?: 'A' | 'B', prefix?: string (makes element ids unique per panel),
+//           style?: a zone's or side's colours (scripts/colour.mjs), for the icons and text of a node drawn on it }
 import { TYPE, LINE_STEP, splitTwo } from './engine.js';
 
 export const ICON_SCALE = 1.15, TRAY_SCALE = 0.42;
@@ -98,18 +99,20 @@ export function measureNode(node, ctx) {
 }
 
 export function drawNode(scene, node, cx, cy, ctx) {
-  const p = plan(node, ctx), T = scene.T, k = ctx.k, pid = `${ctx.prefix ?? ''}${node.id}`, col = sideColours(T, ctx.side);
+  const p = plan(node, ctx), T = scene.T, k = ctx.k, pid = `${ctx.prefix ?? ''}${node.id}`, style = ctx.style;
+  const col = style && !ctx.side ? { tint: style.tokens.tint, stroke: style.stroke } : sideColours(T, ctx.side);
+  const ink = t => style ? (t.role === 'box' ? style.boxInk : t.fill === 'muted' ? style.muted : style.ink) : T[t.fill];
   const bbox = e => { const b = e.getBBox(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
   return scene.at('nodes', () => {
     if (p.frame) {
       const f = p.frame;
-      scene.rect(cx + f.x, cy + f.y, f.w, f.h, (scene.theme.radius ?? 13) * k, f.fill === 'tint' ? col.tint : T.bg, col.stroke, f.sw);
+      scene.rect(cx + f.x, cy + f.y, f.w, f.h, (scene.theme.radius ?? 13) * k, f.fill === 'tint' ? col.tint : style && !ctx.side ? style.fill : T.bg, col.stroke, f.sw);
     }
-    if (p.icon) scene.icon(node.icon, `${pid}-ic`, cx, cy, p.icon.scale);
-    p.items.forEach((it, i) => scene.icon(it.icon, `${pid}-i${i}`, cx + it.x, cy + it.y, TRAY_SCALE * k));
+    if (p.icon) scene.icon(node.icon, `${pid}-ic`, cx, cy, p.icon.scale, style?.tokens);
+    p.items.forEach((it, i) => scene.icon(it.icon, `${pid}-i${i}`, cx + it.x, cy + it.y, TRAY_SCALE * k, style?.tokens));
     const labelBoxes = p.texts.map((t, i) => {
       const x = cx + (t.x ?? 0), [size, weight] = t.font;
-      const e = scene.text(x, cy + t.ys[0], t.lines[0], { size: size * k, weight, fill: T[t.fill], id: `${pid}-t${i}`, role: t.role, owner: pid });
+      const e = scene.text(x, cy + t.ys[0], t.lines[0], { size: size * k, weight, fill: ink(t), id: `${pid}-t${i}`, role: t.role, owner: pid });
       if (t.lines.length > 1) {
         e.textContent = '';
         t.lines.forEach((line, j) => { const s = document.createElementNS(NS, 'tspan'); s.setAttribute('x', num(x)); s.setAttribute('y', num(cy + t.ys[j])); s.textContent = line; e.appendChild(s); });

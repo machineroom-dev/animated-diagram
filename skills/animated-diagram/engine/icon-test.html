@@ -32,9 +32,10 @@
     if (rowLabels) rowLabels.forEach((s, i) => { const t = el('text', { x: 24, y: top + (i + 0.5) * TILE + 8, 'font-size': 24, 'font-weight': 640, fill: T.ink }, svg); t.textContent = s; });
     const scenes = cells.map((c, i) => {
       const g = el('g', { transform: `translate(${left + (i % cols) * TILE} ${top + Math.floor(i / cols) * TILE})` }, svg);
-      el('rect', { width: TILE, height: TILE, fill: T.panel, ...(rowLabels ? { stroke: T.panelStroke, 'stroke-width': 1 } : {}) }, g);
-      const scene = new Scene(g, theme, 1, { style: c.style });
-      scene.icon(c.icon, `c${i}`, TILE / 2, TILE / 2, SCALE);
+      const tile = el('rect', { width: TILE, height: TILE, fill: T.panel, ...(rowLabels ? { stroke: T.panelStroke, 'stroke-width': 1 } : {}) }, g);
+      const scene = new Scene(g, theme, 1, { style: c.style }), zone = c.zone ? scene.zones[c.zone] : null;
+      if (zone) tile.setAttribute('fill', zone.fill);
+      scene.icon(c.icon, `c${i}`, TILE / 2, TILE / 2, SCALE, zone?.tokens);
       scene.seek(c.f);
       return scene;
     });

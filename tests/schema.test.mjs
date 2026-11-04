@@ -59,6 +59,14 @@ test('subtitle is an optional non-empty string', () => {
   failsWith('cdn', x => { x.subtitle = 3; }, 'subtitle: must be a non-empty string');
 });
 
+test('a group may pick a zone colour by name', () => {
+  const d = fixture('cdn');
+  d.panels[0].groups[0].color = 'teal';
+  assert.deepEqual(validateDiagram(d, { icons }), { ok: true, errors: [] });
+  failsWith('cdn', x => { x.panels[0].groups[0].color = 'mauve'; }, 'panels[0].groups[0].color: "mauve" is not one of primary, teal, violet, amber, pink, green, blue');
+  failsWith('cdn', x => { x.panels[0].groups = [{ label: 'A', nodes: ['user'], color: 'teal' }, { label: 'B', nodes: ['dns'], color: 'teal' }]; }, 'panels[0].groups[1].color: "teal" is already used by another group');
+});
+
 test('cells sit inside the grid and are unique', () => {
   failsWith('cdn', d => { d.panels[0].nodes[1].cell = [2, 0]; }, 'panels[0].nodes[1].cell: [2, 0] is outside the 2×3 grid');
   failsWith('cdn', d => { d.panels[0].nodes[1].cell = [0, 0]; }, 'panels[0].nodes[1].cell: [0, 0] is already taken by "user"');

@@ -66,6 +66,13 @@ function bentLabel(points, bounds, walls, k, partner = null) {
   return { x: mx, y: my - LABEL.above * k, side: 'center', grow: 'up' };
 }
 
+// Hands each group (or stack band) its zone: its own colour, else the next in the theme's order that nothing has claimed.
+function assignZones(scene, groups) {
+  const taken = new Set(groups.map(g => g.color).filter(Boolean)), free = scene.zoneOrder.filter(z => !taken.has(z));
+  let next = 0;
+  return groups.map(g => scene.zones[g.color ?? free[next++ % free.length]]);
+}
+
 // An arrow's segments as thin boxes, so later labels keep off them.
 const segmentBoxes = points => points.slice(1).map((q, i) => { const p = points[i]; return { x: Math.min(p[0], q[0]), y: Math.min(p[1], q[1]), w: Math.max(Math.abs(q[0] - p[0]), 0.01), h: Math.max(Math.abs(q[1] - p[1]), 0.01) }; });
 
@@ -98,7 +105,7 @@ export function layoutPanel(panel, frame, ctx) {
     up[r] = Math.max(up[r], mm.ay + (extraTop.get(n.id) ?? 0));
     down[r] = Math.max(down[r], mm.h - mm.ay + (extraBottom.get(n.id) ?? 0));
   }
-  const content = up.reduce((s, v, i) => s + v + down[i], 0);
+  const content = up.reduce((s, v, i) => s + v + down[i], 0), spare = inner.h - content;
   const gaps = rows - 1 + 2 * EDGE, gap = rows > 1 ? (inner.h - content) / gaps : 0;
   const rowY = [];
   let y = rows > 1 ? inner.y + EDGE * gap : inner.y + (inner.h - content) / 2;
@@ -110,23 +117,29 @@ export function layoutPanel(panel, frame, ctx) {
     inRow.forEach((n, i) => slotX.set(n.id, frame.x + (i + 0.5) * frame.w / inRow.length));
   }
 
+  // What each node sits on decides its colours: a comparison's side, a stack's band, or a group's zone.
+  const styleOf = new Map();
   const bands = [];
   if (stack) {
-    const label = new Map((panel.groups ?? []).map(g => [byId.get(g.nodes[0]).cell[1], g.label]));
-    for (let r = 0; r < rows; r++) {
-      if (!used[r]) continue;
-      const b = { x: frame.x, y: rowY[r] - up[r], w: frame.w, h: up[r] + down[r], row: r, label: label.get(r) ?? null };
+    const rowGroup = new Map((panel.groups ?? []).map(g => [byId.get(g.nodes[0]).cell[1], g]));
+    const usedRows = used.flatMap((u, r) => u ? [r] : []), zones = assignZones(scene, usedRows.map(r => rowGroup.get(r) ?? {}));
+    usedRows.forEach((r, i) => {
+      const z = zones[i], b = { x: frame.x, y: rowY[r] - up[r], w: frame.w, h: up[r] + down[r], row: r, label: rowGroup.get(r)?.label ?? null, zone: z };
       scene.at('groups', () => {
-        scene.rect(b.x, b.y, b.w, b.h, BAND.r * k, T.panel, T.panelStroke, BAND.sw * k);
-        if (b.label) { const [size, weight] = TYPE.group; scene.text(b.x + BAND.tx * k, b.y + BAND.ty * k, b.label, { size: size * k, weight, fill: T.groupText, anchor: 'start', ls: 1.4 * k, role: 'group', owner: `${prefix}band${r}` }); }
+        scene.rect(b.x, b.y, b.w, b.h, BAND.r * k, z.fill, z.stroke, BAND.sw * k);
+        if (b.label) { const [size, weight] = TYPE.group; scene.text(b.x + BAND.tx * k, b.y + BAND.ty * k, b.label, { size: size * k, weight, fill: z.text, anchor: 'start', ls: 1.4 * k, role: 'group', owner: `${prefix}band${r}` }); }
       });
+      for (const n of panel.nodes) if (n.cell[1] === r) styleOf.set(n.id, z);
       bands.push(b);
-    }
+    });
   }
+  const groupZones = ctx.side ? groups.map(() => null) : assignZones(scene, groups);
+  groups.forEach((g, i) => { if (groupZones[i]) for (const id of g.nodes) if (!styleOf.has(id)) styleOf.set(id, groupZones[i]); });
+  const sideStyle = ctx.side ? scene.sides[ctx.side] : null;
 
   const nodes = panel.nodes.map(n => {
     const [dx, dy] = n.offset ?? [0, 0], cx = (stack ? slotX.get(n.id) : colX(n.cell[0])) + dx * k, cy = rowY[n.cell[1]] + dy * k;
-    const d = drawNode(scene, n, cx, cy, nctx);
+    const d = drawNode(scene, n, cx, cy, { ...nctx, style: sideStyle ?? styleOf.get(n.id) });
     return { id: n.id, cx, cy, cell: n.cell, ...d };
   });
   const placed = new Map(nodes.map(n => [n.id, n]));
@@ -134,13 +147,18 @@ export function layoutPanel(panel, frame, ctx) {
   const bounds = { x: frame.x + LABEL.edge * k, y: frame.y, w: frame.w - 2 * LABEL.edge * k, h: frame.h };
 
   // Group rects come first in their layer, under everything; titles are placed once the arrows are known.
-  const groupOut = groups.map(g => {
+  const groupOut = groups.map((g, gi) => {
     const bs = g.nodes.map(id => placed.get(id).box);
     const x0 = Math.min(...bs.map(b => b.x)) - GROUP.pad * k, x1 = Math.max(...bs.map(b => b.x + b.w)) + GROUP.pad * k;
     const y0 = Math.min(...bs.map(b => b.y)) - (GROUP.pad + GROUP.title) * k, y1 = Math.max(...bs.map(b => b.y + b.h)) + GROUP.pad * k;
-    scene.at('groups', () => scene.rect(x0, y0, x1 - x0, y1 - y0, GROUP.r * k, T.bg, ctx.side ? T[`side${ctx.side}`] : T.primary, GROUP.sw * k));
-    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, label: g.label, nodes: g.nodes };
+    const z = groupZones[gi];
+    scene.at('groups', () => scene.rect(x0, y0, x1 - x0, y1 - y0, GROUP.r * k, z ? z.fill : T.bg, z ? z.stroke : T[`side${ctx.side}`], GROUP.sw * k));
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, label: g.label, nodes: g.nodes, zone: z };
   });
+
+  // A label takes its colour from what lies under it, so it passes on that ground.
+  const inRect = (r, x, y) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  const groundAt = (x, y) => [...bands, ...groupOut].find(r => r.zone && inRect(r, x, y))?.zone ?? sideStyle;
 
   // Arrows. Neighbours get straight lines (pairs side by side); the rest go through route(): Ls, or round a gutter for
   // retries and back edges (the target first appears in an earlier step, and the step isn't half of a pair).
@@ -191,7 +209,7 @@ export function layoutPanel(panel, frame, ctx) {
     if (s.label) {
       const [fillTok, weight] = LABEL_STYLE[kind] ?? (s.n === undefined ? ['muted', 480] : ['ink', TYPE.step[1]]);
       labelId = scene.label({ n: s.n, text: s.label, x: lab.x, y: lab.y, side: lab.side, grow: lab.grow,
-        maxWidth: room(lab.x, lab.y, lab.side, bounds, walls, k), fill: T[fillTok], weight, owner: id, panel: prefix });
+        maxWidth: room(lab.x, lab.y, lab.side, bounds, walls, k), fill: groundAt(lab.x, lab.y)?.[fillTok] ?? T[fillTok], weight, owner: id, panel: prefix });
     }
     scene.arrow(id, points, { short, kind, owner: id, labelId });
     walls.push(...segmentBoxes(points));
@@ -199,9 +217,9 @@ export function layoutPanel(panel, frame, ctx) {
   });
 
   // Group titles: top-right inside the rect, or top-left when an arrow crosses the right-hand spot.
-  for (const g of groupOut) {
+  groupOut.forEach((g, gi) => {
     const [size, weight] = TYPE.group, ls = 1.4 * k;
-    const t = scene.at('groups', () => scene.text(0, g.y + GROUP.ty * k, g.label, { size: size * k, weight, fill: T.groupText, anchor: 'start', ls, role: 'group', owner: `${prefix}group` }));
+    const t = scene.at('groups', () => scene.text(0, g.y + GROUP.ty * k, g.label, { size: size * k, weight, fill: g.zone?.text ?? T.groupText, anchor: 'start', ls, role: 'group', owner: `${prefix}group${gi}` }));
     const w = t.getBBox().width, h = t.getBBox().height, ty = t.getBBox().y;
     const spot = x => ({ x, y: ty, w, h });
     let box = spot(g.x + g.w - GROUP.tx * k - w);
@@ -211,7 +229,7 @@ export function layoutPanel(panel, frame, ctx) {
     }
     t.setAttribute('x', +box.x.toFixed(3));
     g.title = box;
-  }
+  });
 
-  return { nodes, arrows, groups: groupOut, bands, cellW, cellH, inner, prefix };
+  return { nodes, arrows, groups: groupOut, bands, cellW, cellH, inner, prefix, spare };
 }

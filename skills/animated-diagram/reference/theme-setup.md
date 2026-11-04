@@ -35,6 +35,7 @@ group titles) and pull every text colour to the nearest shade that passes contra
 | `radius`, `lineWeight` | corner radius and arrow weight (3) at 1080 wide |
 | `font` | `{ "family", "file" }`; the bundled Inter is `fonts/InterVariable.woff2`. In v1 a custom font file must sit in the skill's `fonts/` folder |
 | `brand` | `{ "footer": "text", "logo": "logo.png" }`; the text sits at the top right of the card, and the logo (path relative to the theme file) sits 28 px high to its left, in place of the accent dot |
+| `zones` | optional `{ "teal": "#…", … }`: override the hue of any zone colour (`teal violet amber pink green blue`; `primary` always follows the `primary` token). Each zone's fill, border and text are derived from its hue and always pass contrast |
 | `colors` | the 27 tokens below, each `#RRGGBB`. Themes made before the headline changed may still carry `head`, `headText`, `sideAText` and `sideBText`; those are ignored |
 
 Tokens: `bg panel panelStroke ink muted line outline paper neutral dark primary primaryDark tint amber hit hitText

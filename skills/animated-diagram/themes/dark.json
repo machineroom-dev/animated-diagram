@@ -14,7 +14,7 @@
     "panel": "#1A1D24",
     "panelStroke": "#2E333D",
     "ink": "#ECEEF2",
-    "muted": "#8E94A3",
+    "muted": "#A0A6B4",
     "line": "#ECEEF2",
     "outline": "#ECEEF2",
     "paper": "#242832",
@@ -31,11 +31,11 @@
     "badge": "#A78BFA",
     "badgeText": "#111318",
     "accent": "#A78BFA",
-    "brand": "#8E94A3",
+    "brand": "#A0A6B4",
     "groupText": "#B9A4FB",
     "sideA": "#7C4DEB",
-    "sideATint": "#1A1D24",
+    "sideATint": "#242238",
     "sideB": "#34D399",
-    "sideBTint": "#1A1D24"
+    "sideBTint": "#1C2A2C"
   }
 }

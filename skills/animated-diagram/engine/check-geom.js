@@ -74,6 +74,9 @@ export function checkGeometry(composition, canvas, k, scene) {
     if (run >= 16 * k) fail('ARROW_OVERLAP', [a.id, b.id], `the arrows of ${a.id} and ${b.id} run on one line for ${px(run)}: move a cell so each has its own path`);
   }
 
+  // Rows that don't fit: the row gaps would go negative and the rows would lie on each other.
+  for (const p of panels) if (p.layout.spare < -0.5) fail('ROWS_TOO_TALL', [p.name], `panel ${p.name}: its rows need ${px(-p.layout.spare)} more than it has — use fewer rows, or drop sub-labels`);
+
   // Empty bands: the panel's inner height minus everything drawn in it (nodes, labels, arrows, titles).
   for (const p of panels) {
     const { inner, cellH } = p.layout, spans = [];

@@ -2,7 +2,7 @@
 // Every px value is at canvas width 1080 and is multiplied by k = canvas width / 1080.
 import { ICONS } from './icons/index.js';
 import { applyStyle } from './styles.js';
-import { zoneStyles, zoneOrder, mix } from '../scripts/colour.mjs';
+import { zoneStyles, zoneOrder, sideStyles, mix } from '../scripts/colour.mjs';
 
 export const FRAMES = 90;
 export const PL = 30.70, PS = 15.35;          // dash periods: long (requests), short (replies, retries)
@@ -67,7 +67,7 @@ export class Scene {
   constructor(svgEl, theme, k, opts = {}) {
     this.svg = svgEl; this.theme = theme; this.T = theme.colors; this.k = k;
     this.style = opts.style ?? theme.style ?? 'filled';
-    this.zones = zoneStyles(theme); this.zoneOrder = zoneOrder(theme);
+    this.zones = zoneStyles(theme); this.zoneOrder = zoneOrder(theme); this.sides = sideStyles(theme);
     this.icons = { ...ICONS, ...(opts.localIcons ?? {}) };              // a project's own icon wins over the library's
     this.marching = []; this.placed = []; this.labels = []; this.texts = []; this.arrows = [];
     svgEl.setAttribute('font-family', `'${theme.font.family}', sans-serif`);
@@ -161,20 +161,22 @@ export class Scene {
     return path;
   }
 
-  // A library icon at (cx, cy). Copies of one icon share their loop, so they move in unison.
-  icon(name, id, cx, cy, scale) {
+  // A library icon at (cx, cy). Copies of one icon share their loop, so they move in unison. tokens override the
+  // theme's colours for this icon, so it can take the hue of the zone it sits in without knowing about zones.
+  icon(name, id, cx, cy, scale, tokens) {
     const mod = this.icons[name];
     if (!mod) throw new Error(`icon "${name}" is not in the library`);
+    const T = tokens ? { ...this.T, ...tokens } : this.T;
     const g = el('g', { transform: `translate(${num(cx)} ${num(cy)}) scale(${num(scale)})`, 'data-icon': name }, this.layers.nodes);
-    g.innerHTML = mod.draw(id, this.T);
-    applyStyle(g, this.style, this.T);
-    this.placed.push({ mod, id, g, name, cx, cy, scale });
+    g.innerHTML = mod.draw(id, T);
+    applyStyle(g, this.style, T);
+    this.placed.push({ mod, id, g, name, cx, cy, scale, T });
     return g;
   }
 
   seek(f) {
     const v = V * this.k;
     for (const m of this.marching) m.el.setAttribute('stroke-dashoffset', num(m.off0 - v * f));
-    for (const p of this.placed) p.mod.loop(p.id, f, this.T);
+    for (const p of this.placed) p.mod.loop(p.id, f, p.T);
   }
 }

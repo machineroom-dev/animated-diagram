@@ -38,6 +38,7 @@
 | `LABEL_ON_ARROW` | a text crosses another step's arrow | move the node so the arrows separate, or shorten the label |
 | `ARROW_THROUGH_NODE` | an arrow passes through a node | rearrange cells so the step's path is clear |
 | `ARROW_OVERLAP` | two arrows run on one line | move a cell so each step has its own path |
+| `ROWS_TOO_TALL` | the rows need more height than the panel has | use fewer rows, or drop sub-labels |
 | `EMPTY_BAND` | a stretch of the panel taller than a row is empty | use fewer rows, or fill the empty ones |
 | `TEXT_TOO_SMALL` | text under 13 px | (only a custom theme or icon can cause it) |
 | `SEAM` | the loop jumps from the last frame to the first | an icon's loop isn't seamless: fix its `loop()` |

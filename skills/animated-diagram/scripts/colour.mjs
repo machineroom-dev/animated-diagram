@@ -51,23 +51,36 @@ const HUES = {
 const hueGap = (a, b) => { const d = Math.abs(toHsl(a)[0] - toHsl(b)[0]); return Math.min(d, 360 - d); };
 const hueOf = (theme, zone) => zone === 'primary' ? theme.colors.primary : (theme.zones?.[zone] ?? HUES[theme.mode === 'dark' ? 'dark' : 'light'][zone]).toUpperCase();
 
+// One hue on one ground: the colours for text on `fill`, and the tokens an icon drawn there uses instead of the theme's.
+function styleOn(theme, hue, fill, stroke, ground) {
+  const C = theme.colors, dark = theme.mode === 'dark';
+  const muted = nearestPassing(C.muted, fill), tint = mix(ground, hue, dark ? 0.34 : 0.38);
+  return {
+    hue, fill, stroke, muted,
+    text: nearestPassing(dark ? mix(hue, '#FFFFFF', 0.35) : mix(hue, '#000000', 0.25), fill),
+    ink: nearestPassing(C.ink, fill), hitText: nearestPassing(C.hitText, fill), missText: nearestPassing(C.missText, fill),
+    boxInk: nearestPassing(C.ink, tint),
+    tokens: { primary: hue, primaryDark: dark ? mix(hue, ground, 0.35) : mix(hue, '#000000', 0.25), tint, neutral: mix(C.neutral, hue, 0.22), panel: fill, muted },
+  };
+}
+
 export function zoneStyles(theme) {
   const C = theme.colors, dark = theme.mode === 'dark', out = {};
   // A dark zone is the panel lifted toward its hue; a light zone is a pale wash of its hue on the card's own background.
   const ground = dark ? C.panel : C.bg;
   for (const zone of ZONE_NAMES) {
     const hue = hueOf(theme, zone);
-    const fill = mix(ground, hue, dark ? 0.13 : 0.10), stroke = mix(ground, hue, dark ? 0.75 : 0.85);
-    const text = nearestPassing(dark ? mix(hue, '#FFFFFF', 0.35) : mix(hue, '#000000', 0.25), fill);
-    const muted = nearestPassing(C.muted, fill);
-    out[zone] = {
-      hue, fill, stroke, text, muted,
-      ink: nearestPassing(C.ink, fill), hitText: nearestPassing(C.hitText, fill), missText: nearestPassing(C.missText, fill),
-      tokens: {
-        primary: hue, primaryDark: dark ? mix(hue, ground, 0.35) : mix(hue, '#000000', 0.25),
-        tint: mix(ground, hue, dark ? 0.34 : 0.38), neutral: mix(C.neutral, hue, 0.22), panel: fill, muted,
-      },
-    };
+    out[zone] = styleOn(theme, hue, mix(ground, hue, dark ? 0.13 : 0.10), mix(ground, hue, dark ? 0.75 : 0.85), ground);
+  }
+  return out;
+}
+
+// The two panels of a comparison: the same treatment, on the tints the theme already gives them.
+export function sideStyles(theme) {
+  const C = theme.colors, out = {};
+  for (const side of ['A', 'B']) {
+    const ground = C[`side${side}Tint`], hue = C[`side${side}`].toUpperCase(), s = styleOn(theme, hue, ground, hue, ground);
+    out[side] = { ...s, boxInk: s.ink };                 // a text box on a side keeps the side's own tint
   }
   return out;
 }

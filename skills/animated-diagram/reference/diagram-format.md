@@ -49,8 +49,11 @@ Over the cap is a `FILE_SIZE` failure; over the 1 MB budget (scaled by area) is 
 - `title` — a comparison panel's name: part of the headline, and a small caption in the panel.
 - `grid` — `{ "cols": 1–4, "rows": 1–6 }`. Columns share the panel's width equally; rows spread to fill its height.
 - `nodes` — at least one. Each sits in its own `[col, row]` cell, counted from 0.
-- `groups` — optional `{ "label", "nodes": [ids] }`: a box around the members with its title in the top-right
-  corner (top-left if an arrow would cross it). In a stack, a group names its layer and must be one row.
+- `groups` — optional `{ "label", "nodes": [ids], "color" }`: a tinted zone around the members with its title in the
+  top-right corner (top-left if an arrow would cross it). Icons and text inside take the zone's colours. `color` is one
+  of `primary`, `teal`, `violet`, `amber`, `pink`, `green`, `blue`, each used once per panel; leave it out and groups
+  take the next one in order. In a stack, a group names its layer and must be one row. In a comparison the panel's side
+  colour wins, so `color` has no effect there.
 - `steps` — the arrows, in reading order (may be empty).
 
 ## Node

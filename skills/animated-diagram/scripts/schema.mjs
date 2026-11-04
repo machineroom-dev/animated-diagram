@@ -6,6 +6,8 @@
 //     https://authoredup.com/blog/how-to-post-a-gif-to-linkedin (third party).
 //   Instagram (square): no published GIF upload limit (Instagram turns uploads into video), so the 5_000_000 default.
 //   X (landscape): 15 MB, at most 1280×1080 and 350 frames — https://docs.x.com/x-api/media/quickstart/best-practices
+import { ZONE_NAMES } from './colour.mjs';
+
 export const CANVAS = {
   'linkedin-portrait': { w: 1080, h: 1350, maxGifBytes: 5_000_000 },
   square: { w: 1080, h: 1080, maxGifBytes: 5_000_000 },
@@ -22,7 +24,7 @@ const FIELDS = {
   grid: ['cols', 'rows'],
   node: ['id', 'type', 'icon', 'name', 'sub', 'cell', 'items', 'offset'],
   item: ['icon', 'caption'],
-  group: ['label', 'nodes'],
+  group: ['label', 'nodes', 'color'],
   step: ['n', 'from', 'to', 'label', 'kind', 'reply'],
 };
 const RULEBOOK = 'reference/icon-rulebook.md';
@@ -158,6 +160,10 @@ export function validateDiagram(d, { icons }) {
         if (!isObj(g)) return err(G, 'must be { "label", "nodes" }');
         unknown(g, 'group', k => `${G}.${k}`);
         if (!isStr(g.label)) err(`${G}.label`, 'required: the group title');
+        if (g.color !== undefined) {
+          if (!ZONE_NAMES.includes(g.color)) err(`${G}.color`, `"${g.color}" ${oneOf(ZONE_NAMES)}`);
+          else if (p.groups.slice(0, gi).some(o => o?.color === g.color)) err(`${G}.color`, `"${g.color}" is already used by another group`);
+        }
         if (!Array.isArray(g.nodes) || !g.nodes.length) return err(`${G}.nodes`, 'must be a list of at least one node id');
         for (const id of g.nodes) if (!ids.has(id)) err(`${G}.nodes`, `no node "${id}" in this panel`);
         if (tpl === 'stack') {

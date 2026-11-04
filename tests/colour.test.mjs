@@ -1,7 +1,7 @@
 // The pure colour module: its maths moved out of theme.mjs, and the zone palette derived from a theme.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { contrast, relLum, toHsl, ZONE_NAMES, zoneStyles, zoneOrder } from '../skills/animated-diagram/scripts/colour.mjs';
+import { contrast, relLum, toHsl, ZONE_NAMES, zoneStyles, zoneOrder, sideStyles } from '../skills/animated-diagram/scripts/colour.mjs';
 import { loadTheme, contrast as themeContrast, nearestPassing as themeNearest } from '../skills/animated-diagram/scripts/theme.mjs';
 
 const PRESETS = ['light', 'dark', 'machine-room-dark'];
@@ -84,4 +84,32 @@ test('zoneOrder starts at primary, holds enough for six zones and skips a hue th
 test('relLum stays what theme.mjs always computed', () => {
   assert.equal(relLum('#000000'), 0);
   assert.equal(relLum('#FFFFFF'), 1);
+});
+
+test('text in a text box on a zone\'s tint passes', () => {
+  for (const name of PRESETS) {
+    const z = zoneStyles(loadTheme(name));
+    for (const zone of ZONE_NAMES) assert.ok(contrast(z[zone].boxInk, z[zone].tokens.tint) >= 4.5, `${name}.${zone} ${z[zone].boxInk} on ${z[zone].tokens.tint}`);
+  }
+});
+
+test('the two sides of a comparison get styles on their own tints', () => {
+  for (const name of PRESETS) {
+    const t = loadTheme(name), s = sideStyles(t);
+    assert.deepEqual(Object.keys(s), ['A', 'B']);
+    for (const side of ['A', 'B']) {
+      const ground = t.colors[`side${side}Tint`];
+      assert.equal(s[side].hue, t.colors[`side${side}`].toUpperCase());
+      assert.equal(s[side].tokens.panel, ground, 'line style knocks fills back to the panel it sits on');
+      for (const key of ['ink', 'muted', 'hitText', 'missText']) assert.ok(contrast(s[side][key], ground) >= 4.5, `${name}.${side}.${key}`);
+    }
+  }
+});
+
+test('presets tint their comparison panels', () => {
+  for (const name of ['dark', 'machine-room-dark']) {
+    const C = loadTheme(name).colors;
+    assert.notEqual(C.sideATint, C.panel, name);
+    assert.notEqual(C.sideBTint, C.panel, name);
+  }
 });

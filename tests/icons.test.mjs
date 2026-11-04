@@ -18,11 +18,11 @@ after(async () => { await done?.(); });
 
 // Renders one icon at each frame in FRAMES, always in the same 240×240 tile (Chrome does not rasterise identically at
 // different offsets), and measures, in the page, how each frame differs from f0.
-async function frameStats(name, style, preset) {
+async function frameStats(name, style, preset, zone) {
   const theme = JSON.parse(fs.readFileSync(`skills/animated-diagram/themes/${preset}.json`, 'utf8'));
   const shots = [];
   for (const f of FRAMES) {      // a fresh tile per frame: incremental repaints drift by a pixel or two over many seeks
-    await page.evaluate(([icon, style, theme, f]) => window.grid([{ icon, style, f }], { theme, cols: 1 }).then(() => 0), [name, style, theme, f]);
+    await page.evaluate(([icon, style, theme, f, zone]) => window.grid([{ icon, style, f, zone }], { theme, cols: 1 }).then(() => 0), [name, style, theme, f, zone]);
     shots.push((await page.screenshot({ clip: { x: 0, y: 0, width: TILE, height: TILE } })).toString('base64'));
   }
   const [bw, bh] = ICONS[name].box;
@@ -70,6 +70,18 @@ for (const name of NAMES) {
       assert.ok(moving.length >= 2, `${tag}: only frames [${moving}] differ from f0 by ≥ 40 px (${[15, 30, 45, 60, 75].map(f => at(f).changed)})`);
       const strays = FRAMES.filter(f => at(f).away > 0);
       assert.deepEqual(strays, [], `${tag}: pixels outside box × 1.15 + 8 change at frames [${strays}]`);
+    }
+  });
+}
+
+// A zone recolours an icon's body, which could hide a light drawn in the same hue (amber and lime lights, say).
+for (const name of NAMES) {
+  test(`${name}: still moves visibly in the amber and green zones`, async () => {
+    for (const zone of ['amber', 'green']) {
+      const s = await frameStats(name, 'filled', 'machine-room-dark', zone), at = f => s[FRAMES.indexOf(f)], tag = `${name}/${zone}`;
+      assert.equal(at(90).changed, 0, `${tag}: f90 differs from f0`);
+      const moving = [15, 30, 45, 60, 75].filter(f => at(f).changed >= 40);
+      assert.ok(moving.length >= 2, `${tag}: only frames [${moving}] differ from f0 by ≥ 40 px (${[15, 30, 45, 60, 75].map(f => at(f).changed)})`);
     }
   });
 }
