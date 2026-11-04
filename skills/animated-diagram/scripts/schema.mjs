@@ -12,19 +12,24 @@ export const CANVAS = {
   'linkedin-portrait': { w: 1080, h: 1350, maxGifBytes: 5_000_000 },
   square: { w: 1080, h: 1080, maxGifBytes: 5_000_000 },
   landscape: { w: 1200, h: 675, maxGifBytes: 15_000_000 },
+  // A map's canvas. k < w / 1080 means more room per unit, which is where a map's density comes from; a text floor of its own
+  // stops that from silently relaxing the feed-reading minimum. Inside X's 1280×1080, and a README's column at a glance.
+  poster: { w: 1280, h: 800, k: 0.8, minText: 12, maxGifBytes: 15_000_000, budgetBytes: 3_000_000 },
 };
 export const DEFAULTS = { canvas: 'linkedin-portrait', still: 45 };
-export const TEMPLATES = ['flow-grid', 'comparison', 'stack'];
+export const TEMPLATES = ['flow-grid', 'comparison', 'stack', 'map'];
 export const NODE_TYPES = ['icon', 'text', 'tray'];
 export const KINDS = ['normal', 'hit', 'miss', 'retry', 'solid'];
-const PANELS = { 'flow-grid': 1, comparison: 2, stack: 1 };
+const PANELS = { 'flow-grid': 1, comparison: 2, stack: 1, map: 1 };
+const MAP_GRID = { poster: { cols: 7, rows: 5 }, 'linkedin-portrait': { cols: 4, rows: 6 } };   // the canvases a map fits
+export const MAX_ZONES = 6;
 const FIELDS = {
   diagram: ['canvas', 'template', 'title', 'subtitle', 'footer', 'still', 'panels'],
   panel: ['title', 'grid', 'nodes', 'groups', 'steps'],
   grid: ['cols', 'rows'],
   node: ['id', 'type', 'icon', 'name', 'sub', 'cell', 'items', 'offset'],
   item: ['icon', 'caption'],
-  group: ['label', 'nodes', 'color'],
+  group: ['id', 'label', 'nodes', 'color'],
   step: ['n', 'from', 'to', 'label', 'kind', 'reply'],
 };
 const RULEBOOK = 'reference/icon-rulebook.md';
@@ -90,7 +95,9 @@ export function validateDiagram(d, { icons }) {
   if (d.canvas !== undefined && !CANVAS[d.canvas]) err('canvas', `"${d.canvas}" ${oneOf(Object.keys(CANVAS))}`);
   if (d.template === undefined) err('template', `required (one of ${TEMPLATES.join(', ')})`);
   else if (!TEMPLATES.includes(d.template)) err('template', `"${d.template}" ${oneOf(TEMPLATES)}`);
-  const tpl = TEMPLATES.includes(d.template) ? d.template : null;
+  const tpl = TEMPLATES.includes(d.template) ? d.template : null, map = tpl === 'map', canvasName = d.canvas ?? DEFAULTS.canvas;
+  if (map && CANVAS[canvasName] && !MAP_GRID[canvasName]) err('canvas', `a map needs ${Object.keys(MAP_GRID).join(' or ')}, not ${canvasName}`);
+  const limits = map && MAP_GRID[canvasName] ? { ...MAP_GRID[canvasName], on: ` on ${canvasName}` } : { cols: 4, rows: 6, on: '' };
   if (d.title === undefined) { if (tpl && tpl !== 'comparison') err('title', `required for a ${tpl} diagram (the headline)`); }
   else if (!isStr(d.title)) err('title', 'must be a non-empty string');
   if (d.subtitle !== undefined && !isStr(d.subtitle)) err('subtitle', 'must be a non-empty string');
@@ -110,8 +117,8 @@ export function validateDiagram(d, { icons }) {
     if (!isObj(p.grid)) err(`${P}.grid`, 'required: { "cols": 1–4, "rows": 1–6 }');
     else {
       unknown(p.grid, 'grid', k => `${P}.grid.${k}`);
-      if (!isInt(p.grid.cols, 1, 4)) err(`${P}.grid.cols`, 'must be an integer from 1 to 4'); else cols = p.grid.cols;
-      if (!isInt(p.grid.rows, 1, 6)) err(`${P}.grid.rows`, 'must be an integer from 1 to 6'); else rows = p.grid.rows;
+      if (!isInt(p.grid.cols, 1, limits.cols)) err(`${P}.grid.cols`, `must be an integer from 1 to ${limits.cols}${limits.on}`); else cols = p.grid.cols;
+      if (!isInt(p.grid.rows, 1, limits.rows)) err(`${P}.grid.rows`, `must be an integer from 1 to ${limits.rows}${limits.on}`); else rows = p.grid.rows;
     }
 
     const ids = new Map(), cells = new Map();         // id -> node, "c,r" -> id
@@ -125,6 +132,7 @@ export function validateDiagram(d, { icons }) {
       else ids.set(n.id, n);
       const type = n.type ?? 'icon';
       if (!NODE_TYPES.includes(type)) err(`${N}.type`, `"${n.type}" ${oneOf(NODE_TYPES)}`);
+      else if (map && type === 'tray') err(`${N}.type`, "a tray doesn't fit a map cell; give each item its own node, or join them in a zone");
       if (!isStr(n.name)) err(`${N}.name`, 'required: the text the node shows');
       if (n.sub !== undefined && typeof n.sub !== 'string') err(`${N}.sub`, 'must be a string');
       if (type === 'icon') { if (n.icon === undefined) err(`${N}.icon`, 'required for an icon node (run "cli.mjs icons" for the list)'); else iconName(n.icon, `${N}.icon`); }
@@ -153,13 +161,20 @@ export function validateDiagram(d, { icons }) {
     });
     const rowOf = id => { const c = ids.get(id)?.cell; return Array.isArray(c) && Number.isInteger(c[1]) ? c[1] : null; };
 
+    const zoneIds = new Map();                        // a map's zone id -> its member ids
     if (p.groups !== undefined) {
       if (!Array.isArray(p.groups)) err(`${P}.groups`, 'must be a list of { "label", "nodes" }');
-      else p.groups.forEach((g, gi) => {
+      else if (map && p.groups.length > MAX_ZONES) err(`${P}.groups`, `a map holds at most ${MAX_ZONES} zones, this one has ${p.groups.length}`);
+      if (Array.isArray(p.groups)) p.groups.forEach((g, gi) => {
         const G = `${P}.groups[${gi}]`;
         if (!isObj(g)) return err(G, 'must be { "label", "nodes" }');
         unknown(g, 'group', k => `${G}.${k}`);
         if (!isStr(g.label)) err(`${G}.label`, 'required: the group title');
+        if (g.id !== undefined) {
+          if (!isStr(g.id)) err(`${G}.id`, 'must be a non-empty string');
+          else if (zoneIds.has(g.id)) err(`${G}.id`, `"${g.id}" is used twice in this panel`);
+          else zoneIds.set(g.id, g.nodes);
+        }
         if (g.color !== undefined) {
           if (!ZONE_NAMES.includes(g.color)) err(`${G}.color`, `"${g.color}" ${oneOf(ZONE_NAMES)}`);
           else if (p.groups.slice(0, gi).some(o => o?.color === g.color)) err(`${G}.color`, `"${g.color}" is already used by another group`);
@@ -173,6 +188,20 @@ export function validateDiagram(d, { icons }) {
       });
     }
 
+    // A map's zones are the rectangles of their members' cells: nothing else inside, and none overlapping.
+    if (map && Array.isArray(p.groups)) {
+      const rects = p.groups.map(g => {
+        const cells = (isObj(g) && Array.isArray(g.nodes) ? g.nodes : []).map(id => ids.get(id)?.cell).filter(c => Array.isArray(c) && c.every(Number.isInteger));
+        return cells.length ? { x0: Math.min(...cells.map(c => c[0])), x1: Math.max(...cells.map(c => c[0])), y0: Math.min(...cells.map(c => c[1])), y1: Math.max(...cells.map(c => c[1])) } : null;
+      });
+      rects.forEach((r, gi) => {
+        if (!r) return;
+        const G = `${P}.groups[${gi}]`;
+        for (const [id, n] of ids) if (Array.isArray(n.cell) && !p.groups[gi].nodes.includes(id) && n.cell[0] >= r.x0 && n.cell[0] <= r.x1 && n.cell[1] >= r.y0 && n.cell[1] <= r.y1) err(`${G}.nodes`, `"${id}" sits inside this zone but isn't a member: a zone is the rectangle of its members' cells`);
+        rects.slice(0, gi).forEach((o, oi) => { if (o && r.x0 <= o.x1 && o.x0 <= r.x1 && r.y0 <= o.y1 && o.y0 <= r.y1) err(`${G}.nodes`, `this zone overlaps "${p.groups[oi].label}"`); });
+      });
+    }
+
     const numbers = new Set();
     if (!Array.isArray(p.steps)) err(`${P}.steps`, 'must be a list of steps (it may be empty)');
     else p.steps.forEach((s, si) => {
@@ -181,7 +210,13 @@ export function validateDiagram(d, { icons }) {
       unknown(s, 'step', k => `${S}.${k}`);
       for (const end of ['from', 'to']) {
         if (!isStr(s[end])) err(`${S}.${end}`, 'required: a node id');
+        else if (map && s[end].startsWith('zone:')) { if (!zoneIds.has(s[end].slice(5))) err(`${S}.${end}`, `no zone with the id "${s[end].slice(5)}"`); }
         else if (ids.size && !ids.has(s[end])) err(`${S}.${end}`, `no node "${s[end]}" in this panel`);
+      }
+      for (const [z, other] of [[s.to, s.from], [s.from, s.to]]) if (map && isStr(z) && z.startsWith('zone:') && Array.isArray(zoneIds.get(z.slice(5))) && zoneIds.get(z.slice(5)).includes(other)) err(S, `"${other}" is already in zone "${z.slice(5)}"; an arrow to a zone comes from outside it`);
+      if (map && typeof s.label === 'string') {
+        if (s.label && s.n === undefined) err(S, 'a labelled step in a map needs a number, for the legend');
+        if (!s.label && s.n !== undefined) err(S, 'a numbered step in a map needs a label, for the legend');
       }
       if (isStr(s.from) && s.from === s.to) err(S, 'from and to are the same node');
       if (typeof s.label !== 'string') err(`${S}.label`, 'required: the text beside the arrow');

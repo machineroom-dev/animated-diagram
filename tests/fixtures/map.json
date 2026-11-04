@@ -1,0 +1,38 @@
+{
+  "canvas": "poster",
+  "template": "map",
+  "title": "A small map",
+  "subtitle": "Zones, numbered steps and a legend",
+  "panels": [
+    {
+      "grid": { "cols": 5, "rows": 3 },
+      "nodes": [
+        { "id": "user", "icon": "user", "name": "User", "cell": [0, 0] },
+        { "id": "app", "icon": "laptop", "name": "App", "cell": [0, 1] },
+        { "id": "gw", "icon": "api", "name": "Gateway", "cell": [1, 0] },
+        { "id": "auth", "icon": "key", "name": "Auth", "cell": [2, 0] },
+        { "id": "svc", "icon": "rack", "name": "Service", "cell": [2, 1] },
+        { "id": "cache", "icon": "cache", "name": "Cache", "cell": [3, 1] },
+        { "id": "db", "icon": "database", "name": "Database", "cell": [4, 1] },
+        { "id": "a", "icon": "globe", "name": "Search", "cell": [3, 2] },
+        { "id": "b", "icon": "code-window", "name": "Sandbox", "cell": [4, 2] }
+      ],
+      "groups": [
+        { "label": "ACCESS", "nodes": ["gw", "auth"] },
+        { "label": "DATA", "nodes": ["cache", "db"], "color": "violet" },
+        { "id": "tools", "label": "TOOLS", "nodes": ["a", "b"] }
+      ],
+      "steps": [
+        { "n": 1, "from": "user", "to": "app", "label": "opens the app" },
+        { "n": 2, "from": "app", "to": "gw", "label": "sends the request" },
+        { "n": 3, "from": "gw", "to": "auth", "label": "checks the token" },
+        { "n": 4, "from": "auth", "to": "svc", "label": "lets it through" },
+        { "n": 5, "from": "svc", "to": "cache", "label": "reads the cache" },
+        { "n": 6, "from": "cache", "to": "db", "label": "falls back to the database on a miss", "kind": "miss" },
+        { "n": 7, "from": "svc", "to": "zone:tools", "label": "calls a tool" },
+        { "from": "zone:tools", "to": "svc", "label": "", "reply": true },
+        { "n": 8, "from": "svc", "to": "app", "label": "answers", "reply": true }
+      ]
+    }
+  ]
+}

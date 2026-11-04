@@ -147,6 +147,17 @@ test('boot reports each zone and panel with the colour it should come out in', a
   assert.equal(stack.filter(f => f.id.startsWith('zone:')).length, 5);
 });
 
+test('a canvas may set its own k and text floor', async () => {
+  const d = { canvas: 'poster', template: 'flow-grid', title: 'Poster', panels: [{ grid: { cols: 2, rows: 1 }, nodes: [{ id: 'a', icon: 'lock', name: 'A', sub: 'a sub-label', cell: [0, 0] }, { id: 'b', type: 'tray', name: 'B', cell: [1, 0], items: [{ icon: 'key', caption: 'tiny' }, { icon: 'lock', caption: 'text' }] }], steps: [] }] };
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const r = await page.evaluate(async ([d, t]) => { const res = await window.boot(d, t, { style: 'filled', localIcons: [] }); return { failures: res.failures, size: res.size, k: window.scene.k, title: +window.composition.header.title.getAttribute('font-size') }; }, [d, theme()]);
+  await page.setViewportSize({ width: 1080, height: 1350 });
+  assert.deepEqual(r.size, { w: 1280, h: 800 });
+  assert.equal(r.k, 0.8);
+  assert.ok(Math.abs(r.title - 54 * 0.8) < 1e-6);
+  assert.ok(r.failures.some(f => f.code === 'TEXT_TOO_SMALL' && f.detail.includes('at least 12px')), JSON.stringify(r.failures));
+});
+
 test('rows too tall for the panel give ROWS_TOO_TALL', async () => {
   const d = { canvas: 'landscape', template: 'flow-grid', title: 'Too many rows', panels: [{ grid: { cols: 1, rows: 6 }, nodes: [0, 1, 2, 3, 4, 5].map(i => ({ id: `n${i}`, icon: 'lock', name: `Node ${i}`, sub: 'with a sub-label', cell: [0, i] })), steps: [] }] };
   await page.setViewportSize({ width: 1200, height: 675 });

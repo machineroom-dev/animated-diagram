@@ -28,10 +28,10 @@ export function checkGeometry(composition, canvas, k, scene) {
 
   const nodes = panels.flatMap(p => p.layout.nodes.map(n => ({ ...n, pid: p.prefix + n.id, panel: p })));
   const arrows = panels.flatMap(p => p.layout.arrows.map(a => ({ ...a, panel: p, ends: [p.prefix + a.from, p.prefix + a.to] })));
-  const W = canvas.w, H = canvas.h;
+  const W = canvas.w, H = canvas.h, minText = canvas.minText ?? MIN_TEXT * k;
 
   for (const it of items) {
-    if (it.size < MIN_TEXT * k - 1e-6) fail('TEXT_TOO_SMALL', [it.owner], `${it.what} is ${it.size.toFixed(1)}px; text must be at least ${px(MIN_TEXT * k)} to read in a feed`);
+    if (it.size < minText - 1e-6) fail('TEXT_TOO_SMALL', [it.owner], `${it.what} is ${it.size.toFixed(1)}px; text must be at least ${px(minText)} to read in a feed`);
     if (!inside(it.box, { x: 0, y: 0, w: W, h: H }, CANVAS_INSET * k)) fail('TEXT_OUT_OF_CANVAS', [it.owner], `${it.what} runs off the card (it must stay ${px(CANVAS_INSET * k)} inside the edge) — shorten it or move its node`);
     if (it.panel && !inside(it.box, it.panel.frame, PANEL_INSET * k)) fail('TEXT_OUT_OF_PANEL', [it.owner], `${it.what} runs outside panel ${it.panel.name} — shorten it or move its node`);
   }

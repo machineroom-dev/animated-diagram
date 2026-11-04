@@ -18,7 +18,11 @@ function failsWith(name, change, want) {
 
 test('canvas presets', () => {
   assert.deepEqual(Object.fromEntries(Object.entries(CANVAS).map(([n, c]) => [n, [c.w, c.h]])),
-    { 'linkedin-portrait': [1080, 1350], square: [1080, 1080], landscape: [1200, 675] });
+    { 'linkedin-portrait': [1080, 1350], square: [1080, 1080], landscape: [1200, 675], poster: [1280, 800] });
+  assert.equal(CANVAS.poster.k, 0.8, 'more room per unit than k = w / 1080 would give');
+  assert.equal(CANVAS.poster.minText, 12);
+  assert.equal(CANVAS.poster.budgetBytes, 3_000_000);
+  assert.ok(CANVAS.poster.w <= 1280 && CANVAS.poster.h <= 1080, "inside X's GIF limit");
   for (const c of Object.values(CANVAS)) assert.ok(Number.isInteger(c.maxGifBytes) && c.maxGifBytes >= 1_000_000);
 });
 
@@ -37,8 +41,8 @@ test('the canvas defaults to linkedin-portrait', () => {
 
 test('required fields and enums', () => {
   failsWith('cdn', d => { delete d.template; }, 'template: required');
-  failsWith('cdn', d => { d.template = 'tree'; }, 'template: "tree" is not one of flow-grid, comparison, stack');
-  failsWith('cdn', d => { d.canvas = 'portrait'; }, 'canvas: "portrait" is not one of linkedin-portrait, square, landscape');
+  failsWith('cdn', d => { d.template = 'tree'; }, 'template: "tree" is not one of flow-grid, comparison, stack, map');
+  failsWith('cdn', d => { d.canvas = 'portrait'; }, 'canvas: "portrait" is not one of linkedin-portrait, square, landscape, poster');
   failsWith('cdn', d => { delete d.title; }, 'title: required');
   failsWith('cdn', d => { d.still = 90; }, 'still: must be an integer from 0 to 89');
   failsWith('cdn', d => { d.panels[0].grid.cols = 5; }, 'panels[0].grid.cols: must be an integer from 1 to 4');
@@ -65,6 +69,51 @@ test('a group may pick a zone colour by name', () => {
   assert.deepEqual(validateDiagram(d, { icons }), { ok: true, errors: [] });
   failsWith('cdn', x => { x.panels[0].groups[0].color = 'mauve'; }, 'panels[0].groups[0].color: "mauve" is not one of primary, teal, violet, amber, pink, green, blue');
   failsWith('cdn', x => { x.panels[0].groups = [{ label: 'A', nodes: ['user'], color: 'teal' }, { label: 'B', nodes: ['dns'], color: 'teal' }]; }, 'panels[0].groups[1].color: "teal" is already used by another group');
+});
+
+test('a map validates, on poster and on linkedin-portrait', () => {
+  assert.deepEqual(validateDiagram(fixture('map'), { icons }), { ok: true, errors: [] });
+  const d = fixture('map');
+  d.canvas = 'linkedin-portrait';
+  d.panels[0].grid.cols = 5;
+  assert.ok(validateDiagram(d, { icons }).errors.some(e => e.includes('panels[0].grid.cols: must be an integer from 1 to 4 on linkedin-portrait')));
+  failsWith('map', x => { x.canvas = 'square'; }, 'canvas: a map needs poster or linkedin-portrait, not square');
+});
+
+test('a map\'s grid has its own limits; other templates keep theirs, even on a poster', () => {
+  failsWith('map', x => { x.panels[0].grid.cols = 8; }, 'panels[0].grid.cols: must be an integer from 1 to 7 on poster');
+  failsWith('map', x => { x.panels[0].grid.rows = 6; }, 'panels[0].grid.rows: must be an integer from 1 to 5 on poster');
+  failsWith('cdn', x => { x.canvas = 'poster'; x.panels[0].grid.cols = 5; }, 'panels[0].grid.cols: must be an integer from 1 to 4');
+});
+
+test('a map\'s steps: labelled means numbered, numbered means labelled', () => {
+  failsWith('map', x => { delete x.panels[0].steps[0].n; }, 'panels[0].steps[0]: a labelled step in a map needs a number, for the legend');
+  failsWith('map', x => { x.panels[0].steps[0].label = ''; }, 'panels[0].steps[0]: a numbered step in a map needs a label, for the legend');
+  const d = fixture('map');
+  d.panels[0].steps[0] = { from: 'user', to: 'app', label: '' };
+  assert.deepEqual(validateDiagram(d, { icons }).errors, []);
+});
+
+test('a map has no trays', () => {
+  failsWith('map', x => { x.panels[0].nodes[0] = { id: 'user', type: 'tray', name: 'Tray', cell: [0, 0], items: [{ icon: 'lock', caption: 'a' }, { icon: 'key', caption: 'b' }] }; }, 'panels[0].nodes[0].type: a tray doesn\'t fit a map cell');
+});
+
+test('a map\'s zones are clean rectangles', () => {
+  failsWith('map', x => { x.panels[0].groups[0].nodes = ['gw', 'svc']; }, 'panels[0].groups[0].nodes: "auth" sits inside this zone but isn\'t a member');
+  failsWith('map', x => { x.panels[0].groups[1].nodes = ['cache', 'db', 'a', 'b']; }, 'panels[0].groups[2].nodes: this zone overlaps "DATA"');
+  failsWith('map', x => {
+    x.panels[0].grid = { cols: 7, rows: 5 };
+    x.panels[0].nodes = Array.from({ length: 7 }, (_, i) => ({ id: `n${i}`, icon: 'lock', name: `N${i}`, cell: [i, 0] }));
+    x.panels[0].groups = x.panels[0].nodes.map((n, i) => ({ label: `Z${i}`, nodes: [n.id] }));
+    x.panels[0].steps = [];
+  }, 'panels[0].groups: a map holds at most 6 zones, this one has 7');
+});
+
+test('an arrow may end at a zone, in a map only', () => {
+  failsWith('map', x => { x.panels[0].steps[6].to = 'zone:nope'; }, 'panels[0].steps[6].to: no zone with the id "nope"');
+  failsWith('map', x => { x.panels[0].steps[6].from = 'a'; }, 'panels[0].steps[6]: "a" is already in zone "tools"');
+  failsWith('map', x => { x.panels[0].groups[2].id = 'data'; x.panels[0].groups[1].id = 'data'; }, 'panels[0].groups[2].id: "data" is used twice');
+  failsWith('cdn', x => { x.panels[0].groups[0].id = 'edge'; x.panels[0].steps[0].to = 'zone:edge'; }, 'panels[0].steps[0].to: no node "zone:edge" in this panel');
 });
 
 test('cells sit inside the grid and are unique', () => {

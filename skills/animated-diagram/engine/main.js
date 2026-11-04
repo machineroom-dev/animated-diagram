@@ -44,7 +44,7 @@ window.boot = async (diagram, theme, opts = {}) => {
     localIcons[name] = { ...(await import(url)).default, name };
   }
 
-  const canvas = CANVAS[diagram.canvas ?? DEFAULTS.canvas], k = canvas.w / 1080;
+  const canvas = CANVAS[diagram.canvas ?? DEFAULTS.canvas], k = canvas.k ?? canvas.w / 1080;
   const svg = document.getElementById('card');
   svg.innerHTML = '';
   for (const [a, v] of [['width', canvas.w], ['height', canvas.h], ['viewBox', `0 0 ${canvas.w} ${canvas.h}`]]) svg.setAttribute(a, v);

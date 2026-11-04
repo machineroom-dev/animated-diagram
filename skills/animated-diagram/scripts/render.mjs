@@ -67,7 +67,7 @@ export async function render({ diagramPath, themePath, outDir, style, keepFrames
   encodeGif(framesDir, files.gif, path.join(framesDir, 'palette.png'));
   encodeMp4(framesDir, files.mp4, { loops: 4, padColor: theme.colors.bg, frames: FRAMES });
   stillPng(framesDir, still, files.png);
-  const g = await checkGif(files.gif, { frames: FRAMES, delayCs: 3, maxBytes: canvas.maxGifBytes, budgetBytes: 1_000_000 * (canvas.w * canvas.h) / (1080 * 1350), moving, fills });
+  const g = await checkGif(files.gif, { frames: FRAMES, delayCs: 3, maxBytes: canvas.maxGifBytes, budgetBytes: canvas.budgetBytes ?? 1_000_000 * (canvas.w * canvas.h) / (1080 * 1350), moving, fills });
   failures = g.failures; warnings = g.warnings;
   writeCheck({ ok: failures.length === 0, failures, warnings, bytes: g.bytes });
   if (!keepFrames) fs.rmSync(framesDir, { recursive: true, force: true });
