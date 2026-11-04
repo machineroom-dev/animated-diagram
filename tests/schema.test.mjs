@@ -55,6 +55,11 @@ test('required fields and enums', () => {
   failsWith('cdn', d => { d.grid = d.panels[0].grid; }, 'grid: unknown field');
 });
 
+test('no message still talks about pills', () => {
+  const errors = failsWith('rag', d => { delete d.panels[0].title; }, 'panels[0].title: required in a comparison');
+  assert.ok(!errors.join().includes('pill'), errors.join());
+});
+
 test('subtitle is an optional non-empty string', () => {
   const d = fixture('cdn');
   d.subtitle = 'From the browser to the edge, and back';

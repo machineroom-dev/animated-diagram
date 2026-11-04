@@ -147,6 +147,14 @@ test('boot reports each zone and panel with the colour it should come out in', a
   assert.equal(stack.filter(f => f.id.startsWith('zone:')).length, 5);
 });
 
+test('a panel reports the zones on it, so the check can look around them', async () => {
+  const d = fixture('cdn');
+  d.panels[0].groups[0].nodes = d.panels[0].nodes.map(n => n.id);
+  const fills = await page.evaluate(async ([d, t]) => (await window.boot(d, t, { style: 'filled', localIcons: [] })).fills, [d, theme()]);
+  const panel = fills.find(f => f.id === 'panel:main'), zone = fills.find(f => f.id.startsWith('zone:'));
+  assert.deepEqual(panel.holes, [{ x: zone.x, y: zone.y, w: zone.w, h: zone.h }]);
+});
+
 test('a canvas may set its own k and text floor', async () => {
   const d = { canvas: 'poster', template: 'flow-grid', title: 'Poster', panels: [{ grid: { cols: 2, rows: 1 }, nodes: [{ id: 'a', icon: 'lock', name: 'A', sub: 'a sub-label', cell: [0, 0] }, { id: 'b', type: 'tray', name: 'B', cell: [1, 0], items: [{ icon: 'key', caption: 'tiny' }, { icon: 'lock', caption: 'text' }] }], steps: [] }] };
   await page.setViewportSize({ width: 1280, height: 800 });

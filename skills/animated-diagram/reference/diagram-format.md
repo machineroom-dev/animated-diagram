@@ -51,7 +51,7 @@ GIF size caps per canvas (checked 2026-10-24): `linkedin-portrait` 5 MB, `square
   map takes up to 7 columns × 5 rows on a `poster`.
 - `nodes` — at least one. Each sits in its own `[col, row]` cell, counted from 0.
 - `groups` — optional `{ "label", "nodes": [ids], "color" }`: a tinted zone around the members with its title in the
-  top-right corner (top-left if an arrow would cross it). Icons and text inside take the zone's colours. `color` is one
+  top-right corner (top-left if an arrow would cross it; always top-left in a map). Icons and text inside take the zone's colours. `color` is one
   of `primary`, `teal`, `violet`, `amber`, `pink`, `green`, `blue`, each used once per panel; leave it out and groups
   take the next one in order. In a stack, a group names its layer and must be one row. In a comparison the panel's side
   colour wins, so `color` has no effect there. In a map, a zone is the rectangle of its members' cells: nothing else may sit

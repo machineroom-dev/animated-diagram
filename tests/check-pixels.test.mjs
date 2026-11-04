@@ -64,6 +64,19 @@ test('a zone whose tint the palette changed gives FILL_DRIFT', async () => {
   assert.match(f.detail, /#2A3A1C/);
 });
 
+test('a panel mostly covered by a zone is judged by what shows of it', async () => {
+  const dir = tmpDir('ad-drift3-'), gif = path.join(dir, 'x.gif');
+  ff(['-f', 'lavfi', '-i', 'color=c=0x1a1d24:s=200x150,drawbox=x=10:y=10:w=180:h=130:color=0x29253f:t=fill', '-frames:v', '90', '-start_number', '0', path.join(dir, 'f%02d.png')]);
+  encodeGif(dir, gif, path.join(dir, 'p.png'));
+  const panel = { id: 'panel:main', x: 0, y: 0, w: 200, h: 150, colour: '#1A1D24' }, zone = { x: 10, y: 10, w: 180, h: 130 };
+  const fine = await checkGif(gif, { frames: 90, delayCs: 3, maxBytes: 5_000_000, fills: [{ ...panel, holes: [zone] }] });
+  assert.ok(!fine.failures.some(f => f.code === 'FILL_DRIFT'), JSON.stringify(fine));
+  const wrong = await checkGif(gif, { frames: 90, delayCs: 3, maxBytes: 5_000_000, fills: [{ ...panel, colour: '#2A3A1C', holes: [zone] }] });
+  assert.ok(wrong.failures.some(f => f.code === 'FILL_DRIFT'), 'it still catches a real drift');
+  const covered = await checkGif(gif, { frames: 90, delayCs: 3, maxBytes: 5_000_000, fills: [{ ...panel, colour: '#2A3A1C', holes: [{ x: 0, y: 0, w: 200, h: 150 }] }] });
+  assert.ok(!covered.failures.some(f => f.code === 'FILL_DRIFT'), 'nothing shows, so nothing to judge');
+});
+
 test('a zone off the edge of the card is clipped, not an error', async () => {
   const dir = tmpDir('ad-drift2-'), gif = path.join(dir, 'x.gif');
   ff(['-f', 'lavfi', '-i', 'color=c=0x3366cc:s=64x48', '-frames:v', '90', '-start_number', '0', path.join(dir, 'f%02d.png')]);

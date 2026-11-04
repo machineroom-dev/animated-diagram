@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { relLum, contrast, nearestPassing } from './colour.mjs';
+import { relLum, contrast, nearestPassing, ZONE_NAMES } from './colour.mjs';
 
 export { relLum, contrast, toHsl, fromHsl, mix, nearestPassing } from './colour.mjs';
 
@@ -49,6 +49,14 @@ function validate(t) {
   for (const tok of TOKENS) {
     if (c[tok] === undefined) p.push(`colors.${tok}: missing`);
     else if (!HEX.test(c[tok])) p.push(`colors.${tok}: "${c[tok]}" is not #RRGGBB`);
+  }
+  if (t.zones !== undefined) {
+    const names = ZONE_NAMES.filter(z => z !== 'primary');          // the primary zone follows the primary token
+    if (!t.zones || typeof t.zones !== 'object' || Array.isArray(t.zones)) p.push('zones: must be an object of zone colours');
+    else for (const [zone, hue] of Object.entries(t.zones)) {
+      if (!names.includes(zone)) p.push(`zones.${zone}: not a zone colour (${names.join(', ')})`);
+      else if (!HEX.test(hue)) p.push(`zones.${zone}: "${hue}" is not #RRGGBB`);
+    }
   }
   return p;
 }

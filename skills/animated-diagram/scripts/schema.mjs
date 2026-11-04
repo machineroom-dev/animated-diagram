@@ -113,7 +113,7 @@ export function validateDiagram(d, { icons }) {
     const P = `panels[${pi}]`;
     if (!isObj(p)) return err(P, 'must be an object with grid, nodes and steps');
     unknown(p, 'panel', k => `${P}.${k}`);
-    if (p.title === undefined) { if (tpl === 'comparison') err(`${P}.title`, 'required in a comparison (the pill over the panel)'); }
+    if (p.title === undefined) { if (tpl === 'comparison') err(`${P}.title`, 'required in a comparison (a panel\'s name, part of the headline)'); }
     else if (!isStr(p.title)) err(`${P}.title`, 'must be a non-empty string');
 
     let cols = 0, rows = 0;

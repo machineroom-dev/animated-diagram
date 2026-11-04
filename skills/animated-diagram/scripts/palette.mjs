@@ -55,6 +55,7 @@ export function themeFromBrand({ primary, accent, mode, name }) {
   const [h, s, l] = toHsl(primary);
   C.primaryDark = fromHsl([h, s, Math.max(0, l - 0.18)]);
   C.tint = mode === 'dark' ? mix(C.panel, primary, 0.22) : mix('#FFFFFF', primary, 0.12);
+  C.sideATint = mode === 'dark' ? mix(C.panel, primary, 0.10) : mix('#FFFFFF', primary, 0.05);   // side A is the brand colour, so its panel is too
   for (let pass = 0; pass < 3; pass++) for (const [fg, bg] of TEXT_PAIRS) C[fg] = nearestPassing(C[fg], C[bg]);   // a colour on two grounds may need a second look
   const r = checkTheme(t);
   if (!r.ok) throw new Error(`could not build a passing theme from ${primary}: ${r.failures.map(f => f.detail).join('; ')}`);

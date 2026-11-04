@@ -106,7 +106,7 @@ export function checkGeometry(composition, canvas, k, scene) {
   for (const p of panels) {
     const { inner, cellH } = p.layout, spans = [];
     for (const n of nodes.filter(n => n.panel === p)) spans.push([n.box.y, n.box.y + n.box.h]);
-    for (const it of items.filter(it => it.panel === p)) spans.push([it.box.y, it.box.y + it.box.h]);
+    for (const it of items.filter(it => it.panel === p && !/^legend\d*$/.test(it.owner))) spans.push([it.box.y, it.box.y + it.box.h]);     // a legend beside the map doesn't fill it
     for (const a of arrows.filter(a => a.panel === p)) { const ys = a.points.map(q => q[1]); spans.push([Math.min(...ys), Math.max(...ys)]); }
     spans.sort((s, t) => s[0] - t[0]);
     let y = inner.y;

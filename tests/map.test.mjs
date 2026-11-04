@@ -140,6 +140,15 @@ test('too many steps for the rail give LEGEND_OVERFLOW', async () => {
   assert.deepEqual(f.ids, ['main']);
 });
 
+test('a long legend doesn\'t hide empty rows in the map beside it', async () => {
+  // Two rows of nodes out of five, and a legend running down the whole rail next to the empty space below them.
+  const snake = Array.from({ length: 12 }, (_, i) => { const r = Math.floor(i / 6), c = r % 2 ? 5 - i % 6 : i % 6; return { id: `n${i}`, icon: 'lock', name: `N${i}`, cell: [c, r] }; });
+  const d = { canvas: 'poster', template: 'map', title: 'Empty rows', panels: [{ grid: { cols: 6, rows: 5 }, nodes: snake,
+    steps: snake.slice(1).map((n, i) => ({ n: i + 1, from: `n${i}`, to: n.id, label: 'a step whose words take up two lines of the rail' })) }] };
+  const f = (await boot(d)).res.failures;
+  assert.ok(f.some(x => x.code === 'EMPTY_BAND' && x.ids.includes('main')), JSON.stringify(f.map(x => x.code)));
+});
+
 test('spaghetti gives ARROW_TANGLE, on maps only', async () => {
   const r = await page.evaluate(async ([d, t]) => {
     await window.boot(d, t, { style: 'filled', localIcons: [] });

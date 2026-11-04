@@ -85,7 +85,10 @@ export function sideStyles(theme) {
   return out;
 }
 
-// primary first, then the other hues in their listed order, without any that would read as primary again.
+// primary first, then the other hues in their listed order. A hue that would read as primary again goes last, and only
+// comes in at all if a map's six zones would otherwise have to share a colour.
 export function zoneOrder(theme) {
-  return ['primary', ...ZONE_NAMES.slice(1).filter(z => hueGap(hueOf(theme, z), theme.colors.primary) > 25)];
+  const apart = z => hueGap(hueOf(theme, z), theme.colors.primary) > 25, rest = ZONE_NAMES.slice(1);
+  const clear = rest.filter(apart), close = rest.filter(z => !apart(z));
+  return ['primary', ...clear, ...close.slice(0, Math.max(0, 5 - clear.length))];
 }

@@ -7,9 +7,9 @@
 //   FLICKER: pixels whose largest change over the loop is in (0, 24] — dither crawling on what should be still — are
 //   more than 0.05 % of the card. Pixels inside `moving` boxes (icons, arrows) are left out: an icon's slow turn or
 //   fade legitimately changes its anti-aliased edges by a few levels.
-//   FILL_DRIFT: the commonest colour in a flat area (`fills`: a zone or a panel) in frame 0 is more than 6 levels from the
-//   colour it was drawn in, because the 256-colour palette merged it into a neighbour. It stays still, so SEAM and
-//   FLICKER can't see it.
+//   FILL_DRIFT: the commonest colour in a flat area (`fills`: a zone or a panel, leaving out its `holes`, the zones on top of
+//   it) in frame 0 is more than 6 levels from the colour it was drawn in, because the 256-colour palette merged it into a
+//   neighbour. It stays still, so SEAM and FLICKER can't see it.
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 
@@ -62,12 +62,14 @@ function eachFrame(file, size, fn) {
   });
 }
 
-// The commonest colour in a box of an rgb24 frame, as [r, g, b].
-function modalColour(frame, width, height, box) {
+// The commonest colour in a box of an rgb24 frame, as [r, g, b], leaving out its holes. Null if nothing of it shows.
+function modalColour(frame, width, height, box, holes = []) {
   const x0 = Math.max(0, Math.ceil(box.x)), x1 = Math.min(width, Math.floor(box.x + box.w)), y0 = Math.max(0, Math.ceil(box.y)), y1 = Math.min(height, Math.floor(box.y + box.h));
   const counts = new Map();
   let best = null, top = 0;
+  const inHole = (x, y) => holes.some(b => x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h);
   for (let y = y0; y < y1; y++) for (let o = (y * width + x0) * 3, end = (y * width + x1) * 3; o < end; o += 3) {
+    if (holes.length && inHole(o / 3 - y * width, y)) continue;
     const c = frame[o] << 16 | frame[o + 1] << 8 | frame[o + 2], n = (counts.get(c) ?? 0) + 1;
     counts.set(c, n);
     if (n > top) { top = n; best = c; }
@@ -101,7 +103,7 @@ export async function checkGif(file, { frames = 90, delayCs = 3, maxBytes, budge
     prev = f; last = f;
   });
   for (const fill of first ? fills : []) {
-    const got = modalColour(first, h.width, h.height, fill), want = [1, 3, 5].map(i => parseInt(fill.colour.slice(i, i + 2), 16));
+    const got = modalColour(first, h.width, h.height, fill, fill.holes), want = [1, 3, 5].map(i => parseInt(fill.colour.slice(i, i + 2), 16));
     if (got && got.some((v, i) => Math.abs(v - want[i]) > FILL_TOLERANCE)) failures.push({ code: 'FILL_DRIFT', ids: [fill.id], detail: `${fill.id} should be ${fill.colour} but came out #${got.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase()}: the GIF's 256-colour palette merged it into a neighbour` });
   }
   if (n > 1) {

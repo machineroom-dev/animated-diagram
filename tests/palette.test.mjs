@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { paletteFromImage, themeFromBrand } from '../skills/animated-diagram/scripts/palette.mjs';
-import { checkTheme, loadTheme } from '../skills/animated-diagram/scripts/theme.mjs';
+import { checkTheme, loadTheme, toHsl } from '../skills/animated-diagram/scripts/theme.mjs';
 import { tmpDir } from './helpers/run.mjs';
 
 const near = (a, b, tol) => [1, 3, 5].every(i => Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)) <= tol);
@@ -28,6 +28,16 @@ test('themeFromBrand dark passes checkTheme', () => {
   assert.equal(t.colors.primary, '#FF3366');
   assert.equal(t.colors.sideA, '#FF3366');
   assert.deepEqual(checkTheme(t).failures, []);
+});
+
+test('a brand theme tints side A from its own colour, not the preset\'s', () => {
+  for (const mode of ['dark', 'light']) {
+    const t = themeFromBrand({ primary: '#0E7490', mode, name: 'b' }), preset = loadTheme(mode).colors, [hue] = toHsl('#0E7490');
+    assert.notEqual(t.colors.sideATint, preset.sideATint, mode);
+    const d = Math.abs(toHsl(t.colors.sideATint)[0] - hue);
+    assert.ok(Math.min(d, 360 - d) < 25, `${mode}: ${t.colors.sideATint} isn't a tint of the brand colour`);
+    assert.deepEqual(checkTheme(t).failures, []);
+  }
 });
 
 test('themeFromBrand light derives the dark and tint shades', () => {

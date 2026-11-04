@@ -29,10 +29,11 @@ function movingBoxes(scene, k) {
 
 // The flat areas of the card and the colour each should come out in: the GIF's palette check compares them.
 function fillBoxes(composition) {
-  return (composition?.panels ?? []).flatMap(p => [
-    ...(p.fill ? [{ id: `panel:${p.layout.prefix ? p.layout.prefix.slice(0, -1) : 'main'}`, ...p.frame, colour: p.fill }] : []),
-    ...[...p.layout.groups, ...p.layout.bands].filter(z => z.zone).map(z => ({ id: `zone:${z.zone.name}`, x: z.x, y: z.y, w: z.w, h: z.h, colour: z.zone.fill })),
-  ]);
+  return (composition?.panels ?? []).flatMap(p => {
+    const zones = [...p.layout.groups, ...p.layout.bands].filter(z => z.zone).map(z => ({ id: `zone:${z.zone.name}`, x: z.x, y: z.y, w: z.w, h: z.h, colour: z.zone.fill }));
+    const panel = p.fill ? [{ id: `panel:${p.layout.prefix ? p.layout.prefix.slice(0, -1) : 'main'}`, ...p.frame, colour: p.fill, holes: zones.map(({ x, y, w, h }) => ({ x, y, w, h })) }] : [];
+    return [...panel, ...zones];
+  });
 }
 
 window.boot = async (diagram, theme, opts = {}) => {

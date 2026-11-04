@@ -32,6 +32,15 @@ test('a theme file that still has the retired pill tokens loads and passes', () 
   assert.deepEqual(checkTheme(again).failures, []);
 });
 
+test('a theme\'s zones field is checked: hues must be colours, and names must be zones', () => {
+  const t = loadTheme('dark');
+  assert.deepEqual(checkTheme(loadTheme(tmpTheme({ ...t, zones: { teal: '#112233' } }))).failures, []);
+  assert.throws(() => loadTheme(tmpTheme({ ...t, zones: { teal: 'red' } })), /zones\.teal: "red" is not #RRGGBB/);
+  assert.throws(() => loadTheme(tmpTheme({ ...t, zones: { mauve: '#112233' } })), /zones\.mauve: not a zone colour/);
+  assert.throws(() => loadTheme(tmpTheme({ ...t, zones: { primary: '#112233' } })), /zones\.primary: not a zone colour/, 'primary follows the primary token');
+  assert.throws(() => loadTheme(tmpTheme({ ...t, zones: ['#112233'] })), /zones: must be an object/);
+});
+
 test('every text colour is checked on each ground it is drawn on', () => {
   const pairs = TEXT_PAIRS.map(p => p.join('/'));
   for (const p of ['groupText/panel', 'muted/sideATint', 'muted/sideBTint', 'hitText/sideATint', 'hitText/sideBTint', 'missText/sideATint', 'missText/sideBTint']) assert.ok(pairs.includes(p), p);

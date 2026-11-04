@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { contrast, relLum, toHsl, ZONE_NAMES, zoneStyles, zoneOrder, sideStyles } from '../skills/animated-diagram/scripts/colour.mjs';
 import { loadTheme, contrast as themeContrast, nearestPassing as themeNearest } from '../skills/animated-diagram/scripts/theme.mjs';
+import { themeFromBrand } from '../skills/animated-diagram/scripts/palette.mjs';
 
 const PRESETS = ['light', 'dark', 'machine-room-dark'];
 const HEX = /^#[0-9A-F]{6}$/;
@@ -79,6 +80,15 @@ test('zoneOrder starts at primary, holds enough for six zones and skips a hue th
   }
   assert.ok(!zoneOrder(loadTheme('dark')).includes('violet'), 'the dark preset\'s primary is already violet');
   assert.ok(zoneOrder(loadTheme('dark')).includes('blue'));
+});
+
+test('zoneOrder always holds six different zones, whatever the primary', () => {
+  for (const mode of ['dark', 'light']) for (const primary of ['#0E7490', '#0891B2', '#E4572E', '#FF3366', '#7C4DEB', '#14955F', '#D98A0B', '#2F6FDB']) {
+    const t = themeFromBrand({ primary, mode, name: 'b' }), order = zoneOrder(t);
+    assert.ok(order.length >= 6, `${primary} ${mode}: ${order}`);
+    assert.equal(new Set(order).size, order.length);
+    assert.equal(order[0], 'primary');
+  }
 });
 
 test('relLum stays what theme.mjs always computed', () => {
