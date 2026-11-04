@@ -2,13 +2,14 @@
 // Every px value is at canvas width 1080 and is multiplied by k = canvas width / 1080.
 import { ICONS } from './icons/index.js';
 import { applyStyle } from './styles.js';
-import { zoneStyles, zoneOrder } from '../scripts/colour.mjs';
+import { zoneStyles, zoneOrder, mix } from '../scripts/colour.mjs';
 
 export const FRAMES = 90;
 export const PL = 30.70, PS = 15.35;          // dash periods: long (requests), short (replies, retries)
 export const DL = 15, DS = 7.1;               // dash lengths
 export const V = 8 * PL / FRAMES;             // 8 long periods per loop, so the march is seamless
 export const ARM = 10, CORNER_R = 11.5, BADGE_R = 15.5;
+const HEAD_L = 13, TRACK = 0.25;              // arrowhead length; how much of its colour an arrow's track keeps
 export const TYPE = {                         // size / weight at 1080 wide
   title: [54, 800], subtitle: [24, 460], brand: [20, 560], name: [25, 640], sub: [15.5, 450], step: [17.5, 520], badge: [16.5, 650],
   group: [15, 760], box: [19, 640], trayTitle: [20, 650], caption: [13.5, 430],
@@ -132,13 +133,20 @@ export class Scene {
     }
   }
 
-  // A marching arrow along points, with a 45° open chevron at the end.
-  arrow(id, points, { short = false, kind = 'normal', owner, labelId } = {}) {
+  // A marching arrow along points: a filled head whose tip is the last point, a dashed shaft that stops at the head's
+  // base (a butt-ended dash running to the tip would blunt it), and under the march a faint opaque track, so the line
+  // reads as a whole between dashes. `points` keeps the tip, so the layout checks see the whole arrow.
+  arrow(id, points, { short = false, kind = 'normal', owner, labelId, radius } = {}) {
     if (!KIND[kind]) throw new Error(`arrow ${id}: unknown kind "${kind}"`);
     const [token, forceShort, marches] = KIND[kind], k = this.k, sw = (this.theme.lineWeight ?? 2.6) * k;
     const col = this.T[token], isShort = short || forceShort;
-    const { d, L } = roundedPath(points, CORNER_R * k);
+    const [xa, ya] = points[points.length - 2], [x1, y1] = points[points.length - 1];
+    const len = Math.hypot(x1 - xa, y1 - ya), ux = (x1 - xa) / len, uy = (y1 - ya) / len, px = -uy, py = ux;
+    const headLen = Math.min(HEAD_L * k, len * 0.6), a = ARM * k * 0.72;                  // never eats a short last segment
+    const shaft = [...points.slice(0, -1), [x1 - ux * (headLen - 0.5 * k), y1 - uy * (headLen - 0.5 * k)]];
+    const { d, L } = roundedPath(shaft, (radius ?? CORNER_R) * k);
     const g = el('g', { 'data-arrow': id }, this.layers.arrows);
+    if (marches) el('path', { d, fill: 'none', stroke: mix(this.T.panel, col, TRACK), 'stroke-width': sw }, g);
     const path = el('path', { id, d, fill: 'none', stroke: col, 'stroke-width': sw }, g);
     if (marches) {
       const P = (isShort ? PS : PL) * k, D = (isShort ? DS : DL) * k;
@@ -147,10 +155,8 @@ export class Scene {
       path.setAttribute('stroke-dashoffset', num(off0));
       this.marching.push({ el: path, off0, L, P, D });
     }
-    const [xa, ya] = points[points.length - 2], [x1, y1] = points[points.length - 1];
-    const len = Math.hypot(x1 - xa, y1 - ya), ux = (x1 - xa) / len, uy = (y1 - ya) / len, px = -uy, py = ux, a = ARM * k;
-    el('polyline', { points: `${num(x1 - ux * a + px * a)},${num(y1 - uy * a + py * a)} ${num(x1)},${num(y1)} ${num(x1 - ux * a - px * a)},${num(y1 - uy * a - py * a)}`,
-      fill: 'none', stroke: col, 'stroke-width': sw, 'stroke-linejoin': 'miter' }, g);
+    const bx = x1 - ux * headLen, by = y1 - uy * headLen;
+    el('polygon', { points: `${num(x1)},${num(y1)} ${num(bx + px * a)},${num(by + py * a)} ${num(bx - px * a)},${num(by - py * a)}`, fill: col }, g);
     this.arrows.push({ id, points, kind, short: isShort, L, owner, labelId });
     return path;
   }

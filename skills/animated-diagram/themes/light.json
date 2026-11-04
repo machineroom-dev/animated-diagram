@@ -3,7 +3,7 @@
   "mode": "light",
   "style": "filled",
   "radius": 13,
-  "lineWeight": 2.6,
+  "lineWeight": 3,
   "font": {
     "family": "InterV",
     "file": "fonts/InterVariable.woff2"

@@ -3,7 +3,7 @@
 //   window.seek(f); window.checkGeometry() re-runs the layout check (tests)
 // The diagram arrives validated (scripts/schema.mjs). localIcons are module URLs; a local icon overrides a bundled
 // one of the same name. A theme logo is served from the mount /brand/.
-import { Scene } from './engine.js';
+import { Scene, ARM } from './engine.js';
 import { TEMPLATES } from './templates.js';
 import { LayoutError } from './route.js';
 import { checkGeometry } from './check-geom.js';
@@ -21,7 +21,7 @@ async function loadLogo(file) {
 // What is meant to move: every icon's box (all it draws at any frame) and every arrow with its head, padded for
 // anti-aliasing. The GIF's flicker check leaves these out.
 function movingBoxes(scene, k) {
-  const pad = 4 * k, reach = ((scene.theme.lineWeight ?? 2.6) / 2 + 10) * k + pad;
+  const pad = 4 * k, reach = ((scene.theme.lineWeight ?? 2.6) / 2 + ARM) * k + pad;
   const icons = scene.placed.map(p => { const [w, h] = p.mod.box; return { x: p.cx - w * p.scale / 2 - pad, y: p.cy - h * p.scale / 2 - pad, w: w * p.scale + 2 * pad, h: h * p.scale + 2 * pad }; });
   const arrows = scene.arrows.flatMap(a => a.points.slice(1).map((q, i) => { const p = a.points[i]; return { x: Math.min(p[0], q[0]) - reach, y: Math.min(p[1], q[1]) - reach, w: Math.abs(q[0] - p[0]) + 2 * reach, h: Math.abs(q[1] - p[1]) + 2 * reach }; }));
   return [...icons, ...arrows];

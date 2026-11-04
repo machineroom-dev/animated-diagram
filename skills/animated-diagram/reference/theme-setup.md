@@ -32,7 +32,7 @@ group titles) and pull every text colour to the nearest shade that passes contra
 |---|---|
 | `name`, `mode` | `mode` is `light` or `dark` |
 | `style` | icon style: `filled` (default), `line` or `duotone`; `render --style` overrides it per run |
-| `radius`, `lineWeight` | corner radius and arrow weight (2.6) at 1080 wide |
+| `radius`, `lineWeight` | corner radius and arrow weight (3) at 1080 wide |
 | `font` | `{ "family", "file" }`; the bundled Inter is `fonts/InterVariable.woff2`. In v1 a custom font file must sit in the skill's `fonts/` folder |
 | `brand` | `{ "footer": "text", "logo": "logo.png" }`; the text sits at the top right of the card, and the logo (path relative to the theme file) sits 28 px high to its left, in place of the accent dot |
 | `colors` | the 27 tokens below, each `#RRGGBB`. Themes made before the headline changed may still carry `head`, `headText`, `sideAText` and `sideBText`; those are ignored |

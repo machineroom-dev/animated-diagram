@@ -51,6 +51,69 @@ test('a dash meets the head at f0', async () => {
   }
 });
 
+test('a march runs over a faint solid track that never changes', async () => {
+  const r = await inScene((E, scene, T) => {
+    scene.arrow('a', [[100, 100], [100, 300], [500, 300]]);
+    const g = document.querySelector('[data-arrow=a]'), paths = [...g.querySelectorAll('path')];
+    const track = paths[0], march = document.getElementById('a');
+    scene.seek(0); const before = track.outerHTML; scene.seek(45);
+    return { n: paths.length, first: track === march, sameD: track.getAttribute('d') === march.getAttribute('d'), dash: track.getAttribute('stroke-dasharray'),
+      opacity: track.getAttribute('opacity') ?? track.getAttribute('stroke-opacity'), stroke: track.getAttribute('stroke'), line: T.line, panel: T.panel, still: before === track.outerHTML };
+  });
+  assert.equal(r.n, 2);
+  assert.equal(r.first, false, 'the track is under the march');
+  assert.equal(r.sameD, true);
+  assert.equal(r.dash, null);
+  assert.equal(r.opacity, null, 'opaque: blended colours would eat the GIF palette');
+  assert.match(r.stroke, /^#[0-9A-F]{6}$/);
+  assert.notEqual(r.stroke, r.line);
+  assert.notEqual(r.stroke, r.panel);
+  assert.equal(r.still, true);
+});
+
+test('a solid arrow has no track under it', async () => {
+  const n = await inScene((E, scene) => { scene.arrow('s', [[100, 100], [400, 100]], { kind: 'solid' }); return document.querySelectorAll('[data-arrow=s] path').length; });
+  assert.equal(n, 1);
+});
+
+test('the head is filled, its tip on the last point, and the shaft stops at its base', async () => {
+  const r = await inScene((E, scene, T) => {
+    scene.arrow('a', [[100, 100], [400, 100]]);
+    const head = document.querySelector('[data-arrow=a] polygon'), box = head.getBBox(), shaft = document.getElementById('a').getBBox();
+    return { fill: head.getAttribute('fill'), line: T.line, tipX: box.x + box.width, midY: box.y + box.height / 2, baseX: box.x, shaftEnd: shaft.x + shaft.width, points: scene.arrows[0].points };
+  });
+  assert.equal(r.fill, r.line);
+  assert.ok(Math.abs(r.tipX - 400) < 0.5, `tip ${r.tipX}`);
+  assert.ok(Math.abs(r.midY - 100) < 0.5);
+  assert.ok(r.shaftEnd <= r.baseX + 1.5 && r.shaftEnd >= r.baseX, `shaft ends at ${r.shaftEnd}, the base is at ${r.baseX}`);
+  assert.deepEqual(r.points[1], [400, 100], 'the checks still see the arrow reach its tip');
+});
+
+test('the head points along a last segment in any direction', async () => {
+  const r = await inScene((E, scene) => {
+    const out = {};
+    for (const [id, pts] of Object.entries({ up: [[300, 300], [300, 100]], left: [[300, 300], [100, 300]], down: [[100, 100], [100, 300]] })) {
+      scene.arrow(id, pts);
+      const b = document.querySelector(`[data-arrow=${id}] polygon`).getBBox();
+      out[id] = { x: b.x, y: b.y, w: b.width, h: b.height };
+    }
+    return out;
+  });
+  assert.ok(Math.abs(r.up.y - 100) < 0.5, JSON.stringify(r.up));
+  assert.ok(Math.abs(r.left.x - 100) < 0.5, JSON.stringify(r.left));
+  assert.ok(Math.abs(r.down.y + r.down.h - 300) < 0.5, JSON.stringify(r.down));
+});
+
+test('a very short arrow still has a shaft', async () => {
+  const r = await inScene((E, scene) => { scene.arrow('a', [[100, 100], [110, 100]]); return document.getElementById('a').getTotalLength(); });
+  assert.ok(r > 0, `shaft length ${r}`);
+});
+
+test('an arrow can ask for its own corner radius', async () => {
+  const d = await inScene((E, scene) => { scene.arrow('a', [[100, 100], [100, 300], [500, 300]], { radius: 6 }); return document.getElementById('a').getAttribute('d'); });
+  assert.match(d, /A6[ ,]6/);
+});
+
 test('bends are rounded', async () => {
   const d = await inScene((E, scene) => { scene.arrow('a', [[100, 100], [100, 300], [500, 300]]); return document.getElementById('a').getAttribute('d'); });
   assert.match(d, /A11\.5[ ,]11\.5/);
