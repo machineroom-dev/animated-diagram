@@ -31,6 +31,10 @@ Ask Claude Code for one:
 
 > Make an animated diagram of how a CDN serves a request.
 
+Or, for a whole system on one page like the one above:
+
+> Make a system map of how an AI app handles a prompt.
+
 Claude asks for a theme once per project, shows you the numbered steps to confirm, then renders. Every arrow is a
 claim, so check the steps before it draws them.
 
