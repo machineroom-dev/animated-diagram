@@ -7,8 +7,6 @@ import { TYPE } from './engine.js';
 import { route, routePair, edgeX, crosses, END, CLEAR } from './route.js';
 import { rowTracks, assignZones, labelStyle, pairSteps, isShort } from './grid.js';
 
-export { pairSteps };
-
 const INNER = 56;           // panel inner margin
 const PAIR = 20;           // a pair's lines sit ±20 off the centre line
 const LABEL = { side: 22, above: 22, below: 30, clear: 8, band: 26, edge: 24 };   // labels may run to 24 inside the frame
