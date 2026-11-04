@@ -77,6 +77,31 @@ export function checkGeometry(composition, canvas, k, scene) {
   // Rows that don't fit: the row gaps would go negative and the rows would lie on each other.
   for (const p of panels) if (p.layout.spare < -0.5) fail('ROWS_TOO_TALL', [p.name], `panel ${p.name}: its rows need ${px(-p.layout.spare)} more than it has — use fewer rows, or drop sub-labels`);
 
+  // A map's legend has to fit its rail.
+  for (const p of panels) if (p.layout.legend?.overflow > 0) fail('LEGEND_OVERFLOW', [p.name], `the legend needs ${px(p.layout.legend.overflow)} more than its rail has — merge some steps or shorten their labels`);
+
+  // A map's routes must read as routes: few bends, no long way round, few crossings. A layout that routes freely says so
+  // by giving its limits; nothing else measures spaghetti.
+  for (const p of panels) {
+    const limit = p.layout.routing;
+    if (!limit) continue;
+    const mine = arrows.filter(a => a.panel === p);
+    for (const a of mine) {
+      const bends = a.points.length - 2, [s, e] = [a.points[0], a.points.at(-1)], direct = Math.abs(s[0] - e[0]) + Math.abs(s[1] - e[1]);
+      const long = a.points.slice(1).reduce((sum, q, i) => sum + Math.abs(q[0] - a.points[i][0]) + Math.abs(q[1] - a.points[i][1]), 0);
+      if (bends > limit.bends) fail('ARROW_TANGLE', [a.id], `the arrow of ${a.id} ("${a.from}" → "${a.to}") has ${bends} bends — move its ends closer`);
+      else if (long > Math.max(limit.detour * direct, limit.floor * k)) fail('ARROW_TANGLE', [a.id], `the arrow of ${a.id} ("${a.from}" → "${a.to}") runs ${px(long)} to cover ${px(direct)} — move its ends closer`);
+    }
+    let crossings = 0;
+    for (let i = 0; i < mine.length; i++) for (let j = i + 1; j < mine.length; j++) for (const [p0, q0] of legs(mine[i])) for (const [r0, s0] of legs(mine[j])) {
+      const pv = p0[0] === q0[0], rv = r0[0] === s0[0];
+      if (pv === rv) continue;
+      const [vx, v0, v1, hy, h0, h1] = pv ? [p0[0], p0[1], q0[1], r0[1], r0[0], s0[0]] : [r0[0], r0[1], s0[1], p0[1], p0[0], q0[0]];
+      if (hy > Math.min(v0, v1) && hy < Math.max(v0, v1) && vx > Math.min(h0, h1) && vx < Math.max(h0, h1)) crossings++;
+    }
+    if (crossings > Math.max(limit.crossings, Math.ceil(limit.crossingShare * mine.length))) fail('ARROW_TANGLE', [p.name], `${crossings} arrows cross in panel ${p.name} — rearrange the cells so hubs sit beside what they talk to`);
+  }
+
   // Empty bands: the panel's inner height minus everything drawn in it (nodes, labels, arrows, titles).
   for (const p of panels) {
     const { inner, cellH } = p.layout, spans = [];

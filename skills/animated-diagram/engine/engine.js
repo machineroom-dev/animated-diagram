@@ -108,10 +108,22 @@ export class Scene {
     return id;
   }
 
+  // A number on its own, centred on (x, y): how a map marks a step on its line, the text being in the legend.
+  badge(n, x, y, owner, panel) {
+    const k = this.k, r = BADGE_R * k, id = `lab${this.labels.length}`, g = el('g', { id }, this.layers.labels);
+    el('circle', { r, fill: this.T.badge }, g);
+    const b = el('text', { class: 'bd', 'text-anchor': 'middle', 'font-size': TYPE.badge[0] * k, 'font-weight': TYPE.badge[1], fill: this.T.badgeText, y: num(0.36 * TYPE.badge[0] * k) }, g);
+    b.textContent = String(n);
+    g.setAttribute('transform', `translate(${num(x)} ${num(y)})`);
+    this.labels.push({ id, g, n, text: `step ${n}'s badge`, x, y, badge: true, badgeOnly: true, owner, panel, lines: 0, size: TYPE.badge[0] * k, box: { x: x - r, y: y - r, w: 2 * r, h: 2 * r } });
+    return id;
+  }
+
   async layoutLabels() {
     await document.fonts.ready;
     const k = this.k, r = BADGE_R * k, gap = 8 * k;
     for (const L of this.labels) {
+      if (L.badgeOnly) continue;
       const tx = L.g.querySelector('.tx');
       tx.textContent = L.text;
       let lines = [L.text];
@@ -136,10 +148,10 @@ export class Scene {
   // A marching arrow along points: a filled head whose tip is the last point, a dashed shaft that stops at the head's
   // base (a butt-ended dash running to the tip would blunt it), and under the march a faint opaque track, so the line
   // reads as a whole between dashes. `points` keeps the tip, so the layout checks see the whole arrow.
-  arrow(id, points, { short = false, kind = 'normal', owner, labelId, radius } = {}) {
+  arrow(id, points, { short = false, kind = 'normal', owner, labelId, radius, colour } = {}) {
     if (!KIND[kind]) throw new Error(`arrow ${id}: unknown kind "${kind}"`);
     const [token, forceShort, marches] = KIND[kind], k = this.k, sw = (this.theme.lineWeight ?? 2.6) * k;
-    const col = this.T[token], isShort = short || forceShort;
+    const col = colour ?? this.T[token], isShort = short || forceShort;
     const [xa, ya] = points[points.length - 2], [x1, y1] = points[points.length - 1];
     const len = Math.hypot(x1 - xa, y1 - ya), ux = (x1 - xa) / len, uy = (y1 - ya) / len, px = -uy, py = ux;
     const headLen = Math.min(HEAD_L * k, len * 0.6), a = ARM * k * 0.72;                  // never eats a short last segment

@@ -3,7 +3,8 @@
 //   (cx, cy) is the node's anchor: the icon centre for an icon node, the box centre for a text box or tray.
 //   measureNode().ay is the anchor's distance below the block's top, so a layout can centre the whole block.
 //   ctx = { scene, theme, k, cellW, cellH, side?: 'A' | 'B', prefix?: string (makes element ids unique per panel),
-//           style?: a zone's or side's colours (scripts/colour.mjs), for the icons and text of a node drawn on it }
+//           style?: a zone's or side's colours (scripts/colour.mjs), for the icons and text of a node drawn on it,
+//           metrics?: smaller sizes for a dense layout, as { iconScale, name, sub, box, nameGap, subGap, pad } }
 import { TYPE, LINE_STEP, splitTwo } from './engine.js';
 
 export const ICON_SCALE = 1.15, TRAY_SCALE = 0.42;
@@ -15,7 +16,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const num = v => +(+v).toFixed(3);
 
 // A hidden <text> for measuring with the real font: width(str) and the font's ascent/descent at this size.
-function probe(scene, [size, weight], k) {
+export function probe(scene, [size, weight], k) {
   const t = document.createElementNS(NS, 'text');
   t.setAttribute('font-size', size * k); t.setAttribute('font-weight', weight); t.setAttribute('visibility', 'hidden');
   scene.svg.appendChild(t);
@@ -26,45 +27,46 @@ function probe(scene, [size, weight], k) {
 }
 
 // One or two lines that fit maxW if they can; `over` when even two lines don't.
-function fit(text, p, maxW) {
+export function fit(text, p, maxW) {
   let lines = [text];
   if (p.width(text) > maxW) lines = splitTwo(text, p.width) ?? lines;
   const widths = lines.map(p.width), w = Math.max(...widths);
   return { lines, widths, w, over: w > maxW + 0.5 };
 }
 
+const metricsOf = ctx => ({ iconScale: ICON_SCALE, name: TYPE.name, sub: TYPE.sub, box: TYPE.box, nameGap: NAME.gap, subGap: NAME.sub, pad: NAME.pad, ...ctx.metrics });
 const sideColours = (T, side) => side ? { tint: T[`side${side}Tint`], stroke: T[`side${side}`] } : { tint: T.tint, stroke: T.primary };
 
 // The whole node relative to its anchor: the frame or icon, every text line, tray items, and the block's extent.
 function plan(node, ctx) {
-  const { scene, k, cellW } = ctx, type = node.type ?? 'icon', texts = [];
+  const { scene, k, cellW } = ctx, type = node.type ?? 'icon', texts = [], M = metricsOf(ctx);
   let top, bottom, w, frame = null, icon = null, items = [], nameLines = 1, overflow = false;
 
   if (type === 'icon') {
     const mod = scene.icons[node.icon];
     if (!mod) throw new Error(`icon "${node.icon}" is not in the library`);
-    const s = ICON_SCALE * k, [bw, bh] = mod.box, maxW = cellW - NAME.pad * k;
+    const s = M.iconScale * k, [bw, bh] = mod.box, maxW = cellW - M.pad * k;
     icon = { x: -bw * s / 2, y: -bh * s / 2, w: bw * s, h: bh * s, scale: s };
-    const pn = probe(scene, TYPE.name, k), name = fit(node.name, pn, maxW), step = LINE_STEP * TYPE.name[0] * k;
-    const base = NOMINAL / 2 * ICON_SCALE * k + NAME.gap * k, ys = name.lines.map((_, i) => base + i * step);
-    texts.push({ role: 'name', lines: name.lines, ys, font: TYPE.name, fill: 'ink' });
+    const pn = probe(scene, M.name, k), name = fit(node.name, pn, maxW), step = LINE_STEP * M.name[0] * k;
+    const base = NOMINAL / 2 * M.iconScale * k + M.nameGap * k, ys = name.lines.map((_, i) => base + i * step);
+    texts.push({ role: 'name', lines: name.lines, ys, font: M.name, fill: 'ink' });
     nameLines = name.lines.length; overflow = name.over;
     top = Math.min(icon.y, base - pn.asc); bottom = Math.max(icon.y + icon.h, ys.at(-1) + pn.desc); w = Math.max(icon.w, name.w);
     pn.done();
     if (node.sub) {
-      const ps = probe(scene, TYPE.sub, k), sw = ps.width(node.sub), y = ys.at(-1) + NAME.sub * k;
-      texts.push({ role: 'sub', lines: [node.sub], ys: [y], font: TYPE.sub, fill: 'muted' });
+      const ps = probe(scene, M.sub, k), sw = ps.width(node.sub), y = ys.at(-1) + M.subGap * k;
+      texts.push({ role: 'sub', lines: [node.sub], ys: [y], font: M.sub, fill: 'muted' });
       bottom = Math.max(bottom, y + ps.desc); w = Math.max(w, sw); overflow ||= sw > maxW + 0.5;
       ps.done();
     }
   } else if (type === 'text') {
-    const p = probe(scene, TYPE.box, k), maxW = cellW - BOX.margin * k;
+    const p = probe(scene, M.box, k), maxW = cellW - BOX.margin * k;
     let t = { lines: [node.name], widths: [p.width(node.name)] };
     t.w = t.widths[0];
     if (t.w + BOX.pad * k > maxW) t = fit(node.name, p, maxW - BOX.pad * k);
     w = Math.min(Math.max(t.w + BOX.pad * k, BOX.min * k), maxW);
-    const h = (t.lines.length > 1 ? BOX.h2 : BOX.h1) * k, step = LINE_STEP * TYPE.box[0] * k, base = 0.36 * TYPE.box[0] * k;
-    texts.push({ role: 'box', lines: t.lines, ys: t.lines.map((_, i) => base + (i - (t.lines.length - 1) / 2) * step), font: TYPE.box, fill: 'ink' });
+    const h = (t.lines.length > 1 ? BOX.h2 : BOX.h1) * k, step = LINE_STEP * M.box[0] * k, base = 0.36 * M.box[0] * k;
+    texts.push({ role: 'box', lines: t.lines, ys: t.lines.map((_, i) => base + (i - (t.lines.length - 1) / 2) * step), font: M.box, fill: 'ink' });
     nameLines = t.lines.length; overflow = t.w > w - BOX.inset * k;
     top = -h / 2; bottom = h / 2;
     frame = { x: -w / 2, y: top, w, h, fill: 'tint', sw: BOX.sw * k };

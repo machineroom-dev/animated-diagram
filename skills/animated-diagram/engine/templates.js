@@ -2,6 +2,7 @@
 //   compose<Template>(diagram, canvas, ctx) -> { header, panels: [{ frame, layout }] }
 //   ctx = { scene, theme, k, logo?: { href, w, h } }
 import { layoutPanel } from './layout.js';
+import { layoutMap } from './map.js';
 import { TYPE } from './engine.js';
 import { nearestPassing } from '../scripts/colour.mjs';
 
@@ -49,15 +50,17 @@ const plainRuns = (scene, title) => [{ text: title, fill: scene.T.ink }];
 const brandOf = (diagram, theme) => diagram.footer ?? theme.brand?.footer;
 const panelRect = (scene, f, fill, stroke, k, name) => scene.at('back', () => scene.rect(f.x, f.y, f.w, f.h, 24 * k, fill, stroke, 2.4 * k)).setAttribute('data-panel', name);
 
-export function composeFlowGrid(diagram, canvas, ctx) {
+// One panel filling the card under the header, laid out by `layout`.
+const onePanel = layout => (diagram, canvas, ctx) => {
   const { scene, k, theme } = ctx, T = scene.T, W = canvas.w, H = canvas.h;
   background(scene, W, H);
   const head = header(scene, plainRuns(scene, diagram.title), diagram.subtitle, brandOf(diagram, theme), ctx.logo, W, k);
   const frame = { x: MARGIN * k, y: TOP * k, w: W - 2 * MARGIN * k, h: H - (TOP + BOTTOM) * k };
   panelRect(scene, frame, T.panel, T.panelStroke, k, 'main');
-  const layout = layoutPanel(diagram.panels[0], frame, { ...ctx, prefix: '' });
-  return { header: head, panels: [{ frame, layout, fill: T.panel }] };
-}
+  return { header: head, panels: [{ frame, layout: layout(diagram.panels[0], frame, { ...ctx, prefix: '' }), fill: T.panel }] };
+};
+export const composeFlowGrid = onePanel(layoutPanel);
+export const composeMap = onePanel(layoutMap);
 
 // Two panels side by side, each in its side's colours, under one headline naming both sides in those colours. The
 // panel titles are the headline; diagram.title is not drawn. A small caption in each panel means colour isn't the only cue.
@@ -91,4 +94,4 @@ export function composeStack(diagram, canvas, ctx) {
   return { header: head, panels: [{ frame, layout, bands: layout.bands }] };
 }
 
-export const TEMPLATES = { 'flow-grid': composeFlowGrid, comparison: composeComparison, stack: composeStack };
+export const TEMPLATES = { 'flow-grid': composeFlowGrid, comparison: composeComparison, stack: composeStack, map: composeMap };
