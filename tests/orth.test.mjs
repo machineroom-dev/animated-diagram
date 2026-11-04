@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { routeMap, END } from '../skills/animated-diagram/engine/orth.js';
 import { crosses, LayoutError } from '../skills/animated-diagram/engine/route.js';
 
-const CELL = { w: 171, h: 190 }, ORIGIN = { x: 40, y: 150 }, BOUNDS = { x: 30, y: 140, w: 7 * 171 + 20, h: 4 * 190 + 20 };
+const CELL = { w: 197, h: 190 }, ORIGIN = { x: 40, y: 150 }, BOUNDS = { x: 30, y: 140, w: 6 * 197 + 20, h: 4 * 190 + 20 };
 
 // A node as the layout places it: an icon with a name under it.
 function node(id, c, r, nameW = 120) {
@@ -27,26 +27,26 @@ function hero() {
   for (const [id, c, r] of [
     ['user', 0, 0], ['chat', 0, 1],
     ['gateway', 1, 0], ['auth', 2, 0], ['rate', 3, 0], ['output', 1, 1], ['input', 3, 1],
-    ['orch', 4, 1], ['prompt', 4, 2], ['memory', 5, 2],
-    ['large', 1, 2], ['router', 2, 2], ['fast', 2, 3],
-    ['docs', 3, 3], ['reranker', 4, 3], ['vector', 5, 3], ['embedder', 6, 3],
-    ['search', 4, 0], ['sandbox', 5, 0], ['apis', 6, 0],
-    ['traces', 6, 1], ['evals', 6, 2],
+    ['memory', 4, 0], ['orch', 4, 1], ['prompt', 4, 2],
+    ['search', 5, 0], ['sandbox', 5, 1], ['apis', 5, 2],
+    ['large', 1, 2], ['fast', 2, 2], ['router', 3, 2],
+    ['docs', 2, 3], ['reranker', 3, 3], ['vector', 4, 3], ['embedder', 5, 3],
+    ['evals', 0, 3], ['traces', 1, 3],
   ]) N[id] = node(id, c, r);
   const pick = (...ids) => ids.map(i => N[i]);
   const zones = [
     zone('access', pick('gateway', 'auth', 'rate', 'output', 'input')),
-    zone('agent', pick('orch', 'prompt', 'memory')),
-    zone('models', pick('large', 'router', 'fast')),
-    zone('retrieval', pick('docs', 'reranker', 'vector', 'embedder')),
+    zone('agent', pick('memory', 'orch', 'prompt')),
     zone('tools', pick('search', 'sandbox', 'apis')),
-    zone('obs', pick('traces', 'evals')),
+    zone('models', pick('large', 'fast', 'router')),
+    zone('retrieval', pick('docs', 'reranker', 'vector', 'embedder')),
+    zone('obs', pick('evals', 'traces')),
   ];
   const steps = [
     ['user', 'chat'], ['chat', 'gateway'], ['gateway', 'auth'], ['auth', 'rate'], ['rate', 'input'], ['input', 'orch'],
     ['orch', 'memory'], ['orch', 'embedder'], ['embedder', 'vector'], ['vector', 'reranker'], ['reranker', 'prompt'],
     ['prompt', 'router'], ['router', 'large'], ['large', 'orch'], ['orch', 'zone:tools'], ['large', 'output'], ['output', 'chat'],
-    ['router', 'fast'], ['zone:tools', 'orch'], ['docs', 'vector'], ['orch', 'traces'], ['traces', 'evals'],
+    ['router', 'fast'], ['zone:tools', 'orch'], ['docs', 'vector'], ['large', 'traces'], ['traces', 'evals'],
   ].map(([from, to], i) => ({ id: `s${i}`, from, to }));
   return { nodes: Object.values(N), zones, steps, bounds: BOUNDS, k: 1 };
 }
@@ -136,6 +136,25 @@ test('a route to a zone ends at its edge and stays out', () => {
   assert.ok(!(x > z.x && x < z.x + z.w && y > z.y && y < z.y + z.h), `tip (${x}, ${y}) is inside`);
   assert.ok(Math.max(z.x - x, x - z.x - z.w, z.y - y, y - z.y - z.h) <= END + 1, 'at the edge');
   assert.ok(!crosses(pts, { x: z.x + 2, y: z.y + 2, w: z.w - 4, h: z.h - 4 }), 'stays out');
+});
+
+test('an arrow to a zone runs straight when its node faces any part of the zone\'s edge', () => {
+  // The node sits under the zone's first cell, nowhere near the middle of its edge.
+  const a = node('a', 0, 0), b = node('b', 1, 0), c = node('c', 2, 0), n = node('n', 0, 2), z = zone('z', [a, b, c]);
+  const { routes } = routeMap({ nodes: [a, b, c, n], zones: [z], steps: [{ id: 's0', from: 'n', to: 'zone:z' }, { id: 's1', from: 'zone:z', to: 'n' }], bounds: BOUNDS, k: 1 });
+  for (const pts of routes) assert.equal(pts.length, 2, JSON.stringify(pts));
+  assert.notEqual(routes[0][0][0], routes[1][0][0], 'side by side, not on one line');
+});
+
+test('a route keeps out of the gap an arrowhead would sit in, beside every node it passes', () => {
+  const h = hero(), { routes } = routeMap(h), gap = END - 1;
+  routes.forEach((pts, i) => {
+    for (const n of h.nodes) {
+      if (n.id === h.steps[i].from || n.id === h.steps[i].to) continue;
+      assert.ok(!crosses(pts, n.iconBox, gap), `${h.steps[i].from}→${h.steps[i].to} runs within ${END} of the icon of ${n.id}`);
+      for (const l of n.labelBoxes) assert.ok(!crosses(pts, { x: l.x, y: l.y - gap, w: l.w, h: l.h + 2 * gap }), `${h.steps[i].from}→${h.steps[i].to} runs within ${END} above or below the name of ${n.id}`);
+    }
+  });
 });
 
 test('a zone\'s title is never crossed', () => {

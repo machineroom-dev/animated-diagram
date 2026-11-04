@@ -37,7 +37,7 @@ const RULEBOOK = 'reference/icon-rulebook.md';
 // Everyday names for what a library icon shows, so "kafka" suggests queue rather than whatever is spelt alike.
 const ALIASES = {
   queue: 'kafka rabbitmq sqs pubsub broker stream topic message messages mq kinesis nats eventbus',
-  database: 'db postgres postgresql mysql sql mongo mongodb dynamodb storage store warehouse vector vectordb sqlite',
+  database: 'db postgres postgresql mysql sql mongo mongodb dynamodb storage store warehouse vectordb sqlite',
   cache: 'redis memcached memcache',
   laptop: 'browser client web desktop computer pc frontend',
   user: 'person people customer human account',
@@ -56,6 +56,9 @@ const ALIASES = {
   container: 'docker kubernetes k8s pod package',
   'code-window': 'code ide terminal editor script function lambda',
   stopwatch: 'timer ttl clock time latency timeout',
+  funnel: 'filter rerank reranker ranking sieve',
+  vector: 'embedding embeddings embed embedder',
+  chart: 'dashboard metrics analytics evals graph monitoring observability grafana',
 };
 const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 

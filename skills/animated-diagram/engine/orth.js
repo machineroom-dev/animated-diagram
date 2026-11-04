@@ -9,14 +9,15 @@
 import { LayoutError, edgeX } from './route.js';
 
 export const END = 14;              // a route stops this far short of what it joins (arrow.js draws the head inside it)
-const CLEAR = 8;                    // and keeps this far from any box it passes
+const CLEAR = 8;                    // and keeps this far from a name's sides as it passes (END from everything else, so
+                                    // nothing ever runs through the gap an arrowhead would sit in)
 const SEP = 9;                      // two parallel routes stay this far apart: a clear gap at line weight 3
 const LANE = 13;                    // lanes in free space
 const PORT = 16;                    // ports on a side, this far apart
 const STUB_OUT = 10, STUB_IN = 26;  // a route runs straight this far out of its start, and into its end (room for the head)
 const MERGE = 1;                    // lines closer than this are one line
 const HUG = 7;                      // running this close alongside a zone's border costs extra
-const COST = { bend: 42, cross: 150, port: 8, portBusy: 24, foreign: 1.2, hug: 1 };
+const COST = { bend: 70, cross: 120, port: 8, portBusy: 24, foreign: 1.2, hug: 1 };
 
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];                // heading: 0 right, 1 down, 2 left, 3 up
 const opposite = h => (h + 2) % 4;
@@ -63,18 +64,16 @@ class Heap {
 }
 
 // Every place a route may join a node or zone: a point END short of it, with the heading that leaves it.
-function portsOf(end, k) {
+// A zone's edges also get ports opposite each node that talks to it, so an arrow can run straight to any part of an edge.
+function portsOf(end, k, partners = []) {
   const e = END * k, p = PORT * k;
   if (end.zone) {
     const z = end.zone, out = [], along = [0, -1, 1, -2, 2, -3, 3].map(i => i * p);
-    const blocked = (x, y) => z.title && x >= z.title.x - 4 * k && x <= z.title.x + z.title.w + 4 * k && y <= z.title.y + z.title.h + e && y >= z.title.y - e;
-    along.forEach((o, rank) => {
-      const mx = z.x + z.w / 2 + o, my = z.y + z.h / 2 + o;
-      if (!blocked(mx, z.y)) out.push({ x: mx, y: z.y - e, h: 3, rank });
-      out.push({ x: mx, y: z.y + z.h + e, h: 1, rank });
-      out.push({ x: z.x - e, y: my, h: 2, rank });
-      out.push({ x: z.x + z.w + e, y: my, h: 0, rank });
-    });
+    const blocked = x => z.title && x >= z.title.x - 4 * k && x <= z.title.x + z.title.w + 4 * k;
+    const horizontalEdges = (x, rank) => { if (x <= z.x + e || x >= z.x + z.w - e) return; if (!blocked(x)) out.push({ x, y: z.y - e, h: 3, rank }); out.push({ x, y: z.y + z.h + e, h: 1, rank }); };
+    const verticalEdges = (y, rank) => { if (y <= z.y + e || y >= z.y + z.h - e) return; out.push({ x: z.x - e, y, h: 2, rank }); out.push({ x: z.x + z.w + e, y, h: 0, rank }); };
+    along.forEach((o, rank) => { horizontalEdges(z.x + z.w / 2 + o, rank); verticalEdges(z.y + z.h / 2 + o, rank); });
+    for (const n of partners) for (const [o, rank] of [[0, 0], [-p, 0], [p, 0]]) { horizontalEdges(n.cx + o, rank); verticalEdges(n.cy + o, rank); }
     return out;
   }
   const n = end.node, out = [];
@@ -95,10 +94,15 @@ export function routeMap({ nodes, zones = [], steps, bounds, k = 1 }) {
   const endOf = id => id.startsWith('zone:') ? { zone: zoneById.get(id.slice(5)), id } : { node: byId.get(id), id };
   const clear = CLEAR * k, sep = SEP * k, stubOut = STUB_OUT * k, stubIn = STUB_IN * k, hug = HUG * k;
   const ports = new Map();
-  for (const s of steps) for (const id of [s.from, s.to]) if (!ports.has(id)) ports.set(id, portsOf(endOf(id), k));
+  const partnersOf = id => steps.flatMap(s => s.from === id ? [s.to] : s.to === id ? [s.from] : []).filter(o => !o.startsWith('zone:')).map(o => byId.get(o));
+  for (const s of steps) for (const id of [s.from, s.to]) if (!ports.has(id)) ports.set(id, portsOf(endOf(id), k, id.startsWith('zone:') ? partnersOf(id) : []));
 
   // ---------- the lines ----------
-  const boxes = nodes.flatMap(n => [n.iconBox, ...n.labelBoxes].map(b => inflate(b, clear)));
+  const gap = (END - 1) * k;
+  const boxes = nodes.flatMap(n => [
+    inflate(n.iconBox, gap),
+    ...n.labelBoxes.map(b => ({ x0: b.x - clear, x1: b.x + b.w + clear, y0: b.y - gap, y1: b.y + b.h + gap })),
+  ]);
   for (const z of zones) if (z.title) boxes.push(inflate(z.title, 3 * k));
   const xs = [bounds.x, bounds.x + bounds.w], ys = [bounds.y, bounds.y + bounds.h];
   for (const list of ports.values()) for (const p of list) {
@@ -187,7 +191,7 @@ export function routeMap({ nodes, zones = [], steps, bounds, k = 1 }) {
       total += cost; crossings += crossed;
     };
 
-    const portKey = (id, p) => `${id}|${p.h}|${p.rank}`;
+    const portKey = (id, p) => `${id}|${p.h}|${p.x}|${p.y}`;
     const portCost = (id, p) => (p.rank ? COST.port * k : 0) + (portUse.get(`${id}|${p.h}`) ? COST.portBusy * k : 0);
     const toGrid = (x, y) => [nearest(X, x), nearest(Y, y)];
 

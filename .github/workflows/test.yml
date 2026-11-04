@@ -23,7 +23,7 @@ jobs:
           mkdir -p /tmp/try && cd /tmp/try
           cli="$GITHUB_WORKSPACE/skills/animated-diagram/scripts/cli.mjs"
           node "$cli" theme --preset light
-          for name in cdn cache-strategies web-stack; do
+          for name in cdn cache-strategies web-stack anatomy-of-an-ai-app; do
             node "$cli" render "$GITHUB_WORKSPACE/skills/animated-diagram/examples/$name.json" --out out/
           done
           ls -la out/

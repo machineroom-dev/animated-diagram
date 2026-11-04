@@ -69,6 +69,16 @@ test('every numbered step has a legend row, in order, and a badge on its arrow',
   assert.ok(dist <= 26, `the badge is ${dist} from its arrow`);
 });
 
+test('a badge stays off a zone\'s border when its line has a clear stretch', async () => {
+  // A long line down the side of a zone, its middle beside the border, its lower part clear of it.
+  const d = JSON.parse(fs.readFileSync('skills/animated-diagram/examples/anatomy-of-an-ai-app.json', 'utf8'));
+  const r = await boot(d);
+  assert.deepEqual(r.res.failures, []);
+  const touches = (b, z) => b.x < z.x + z.w && z.x < b.x + b.w && b.y < z.y + z.h && z.y < b.y + b.h, inside = (b, z) => b.x >= z.x && b.y >= z.y && b.x + b.w <= z.x + z.w && b.y + b.h <= z.y + z.h;
+  const b8 = r.labels.find(l => l.badgeOnly && l.n === 8).box;
+  for (const z of r.groups) assert.ok(!touches(b8, z) || inside(b8, z), `step 8's badge straddles ${z.label}`);
+});
+
 test('a badge is a centred circle with no text beside it', async () => {
   const r = await page.evaluate(async ([d, t]) => {
     await window.boot(d, t, { style: 'filled', localIcons: [] });

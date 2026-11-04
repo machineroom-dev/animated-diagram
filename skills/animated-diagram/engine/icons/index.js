@@ -19,5 +19,8 @@ import doc from './document.js';
 import llmChip from './llm-chip.js';
 import container from './container.js';
 import codeWindow from './code-window.js';
+import funnel from './funnel.js';
+import vector from './vector.js';
+import chart from './chart.js';
 
-export const ICONS = Object.fromEntries([laptop, globe, rack, cache, tower, stopwatch, user, phone, database, queue, loadBalancer, api, cdnEdge, lock, key, shield, doc, llmChip, container, codeWindow].map(m => [m.name, m]));
+export const ICONS = Object.fromEntries([laptop, globe, rack, cache, tower, stopwatch, user, phone, database, queue, loadBalancer, api, cdnEdge, lock, key, shield, doc, llmChip, container, codeWindow, funnel, vector, chart].map(m => [m.name, m]));

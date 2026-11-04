@@ -1,10 +1,12 @@
 # animated-diagram
 
+![Anatomy of an AI app: a prompt's trip through access checks, an agent, retrieval, models and tools, drawn by this skill](assets/anatomy-of-an-ai-app.gif)
+
 A Claude Code skill that turns a system-design topic into a looping animated diagram. You describe the topic, Claude
 draws it, and you get a GIF, an MP4 and a still PNG. The arrows march in the direction of flow and every icon has its
 own idle animation.
 
-![How a CDN serves a request](assets/cdn.gif)
+That diagram is the skill's own output, from [one JSON file](skills/animated-diagram/examples/anatomy-of-an-ai-app.json).
 
 ## Install
 
@@ -36,19 +38,22 @@ Each render writes four files and takes a few seconds:
 
 | File | What it is |
 |---|---|
-| `<name>.gif` | A seamless 2.7 s loop, usually under 1 MB at 1080×1350 |
+| `<name>.gif` | A seamless 2.7 s loop, usually under 1 MB at 1080×1350; about 1 MB for a dense map too |
 | `<name>.mp4` | The same loop four times, 10.8 s |
 | `<name>.png` | One still frame |
-| `<name>.check.json` | The layout check: collisions, text off the card, arrows on one line, a jump at the loop point |
+| `<name>.check.json` | The layout check: collisions, text off the card, tangled arrows, a jump at the loop point |
 
 If the check fails you get no GIF. Claude reads the failures, moves things and renders again.
 
-## Three layouts
+## Four layouts
+
+A map is the one at the top: a whole system on one page, with colour zones, routed arrows and the steps in a legend. The
+other three tell one story at feed size.
 
 | Flow | Comparison | Stack |
 |---|---|---|
 | ![Flow](assets/cdn.gif) | ![Comparison](assets/cache-strategies.gif) | ![Stack](assets/web-stack.gif) |
-| Numbered steps between nodes, with groups and hit or miss branches | Two approaches side by side | Layers from client to data |
+| Numbered steps between nodes, with zones and hit or miss branches | Two approaches side by side | Layers from client to data |
 
 ## Themes
 
@@ -66,7 +71,7 @@ A theme whose text fails 4.5:1 contrast is refused, and you're offered the neare
 
 The renderer is an ordinary command. You write a small JSON file with nodes in grid cells and numbered steps, and it
 handles the coordinates. The format is in
-[`reference/diagram-format.md`](skills/animated-diagram/reference/diagram-format.md), and there are three starting points in
+[`reference/diagram-format.md`](skills/animated-diagram/reference/diagram-format.md), and there are four starting points in
 [`examples/`](skills/animated-diagram/examples).
 
 ```sh

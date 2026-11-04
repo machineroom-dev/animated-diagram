@@ -1,0 +1,74 @@
+{
+  "canvas": "poster",
+  "template": "map",
+  "title": "Anatomy of an AI app",
+  "subtitle": "One prompt's trip from the chat box to a streamed answer",
+  "panels": [
+    {
+      "grid": { "cols": 6, "rows": 4 },
+      "nodes": [
+        { "id": "user", "icon": "user", "name": "User", "cell": [0, 0] },
+        { "id": "chat", "icon": "laptop", "name": "Chat app", "cell": [0, 1] },
+
+        { "id": "gateway", "icon": "api", "name": "API gateway", "cell": [1, 0] },
+        { "id": "auth", "icon": "key", "name": "Auth", "cell": [2, 0] },
+        { "id": "rate", "icon": "stopwatch", "name": "Rate limiter", "cell": [3, 0] },
+        { "id": "output", "icon": "shield", "name": "Output check", "cell": [1, 1] },
+        { "id": "input", "icon": "shield", "name": "Input check", "cell": [3, 1] },
+
+        { "id": "search", "icon": "globe", "name": "Web search", "cell": [5, 0] },
+        { "id": "sandbox", "icon": "code-window", "name": "Code sandbox", "cell": [5, 1] },
+        { "id": "apis", "icon": "container", "name": "Your APIs", "cell": [5, 2] },
+
+        { "id": "orch", "icon": "rack", "name": "Orchestrator", "cell": [4, 1] },
+        { "id": "prompt", "icon": "document", "name": "Prompt builder", "cell": [4, 2] },
+        { "id": "memory", "icon": "cache", "name": "Session memory", "cell": [4, 0] },
+
+        { "id": "traces", "icon": "queue", "name": "Traces", "cell": [1, 3] },
+        { "id": "evals", "icon": "chart", "name": "Evals", "cell": [0, 3] },
+
+        { "id": "large", "icon": "llm-chip", "name": "Large model", "cell": [1, 2] },
+        { "id": "router", "icon": "load-balancer", "name": "Model router", "cell": [3, 2] },
+        { "id": "fast", "icon": "llm-chip", "name": "Fast model", "cell": [2, 2] },
+
+        { "id": "docs", "icon": "document", "name": "Documents", "cell": [2, 3] },
+        { "id": "reranker", "icon": "funnel", "name": "Reranker", "cell": [3, 3] },
+        { "id": "vectordb", "icon": "database", "name": "Vector DB", "cell": [4, 3] },
+        { "id": "embedder", "icon": "vector", "name": "Embedder", "cell": [5, 3] }
+      ],
+      "groups": [
+        { "label": "ACCESS & SAFETY", "nodes": ["gateway", "auth", "rate", "output", "input"] },
+        { "id": "tools", "label": "TOOLS", "nodes": ["search", "sandbox", "apis"] },
+        { "label": "AGENT", "nodes": ["memory", "orch", "prompt"] },
+        { "label": "MODELS", "nodes": ["large", "fast", "router"] },
+        { "label": "RETRIEVAL", "nodes": ["docs", "reranker", "vectordb", "embedder"] },
+        { "label": "OBSERVABILITY", "nodes": ["evals", "traces"] }
+      ],
+      "steps": [
+        { "n": 1, "from": "user", "to": "chat", "label": "types a prompt" },
+        { "n": 2, "from": "chat", "to": "gateway", "label": "POST /chat" },
+        { "n": 3, "from": "gateway", "to": "auth", "label": "check the token" },
+        { "n": 4, "from": "auth", "to": "rate", "label": "check the quota" },
+        { "n": 5, "from": "rate", "to": "input", "label": "screen the prompt" },
+        { "n": 6, "from": "input", "to": "orch", "label": "clean prompt" },
+        { "n": 7, "from": "orch", "to": "memory", "label": "load the conversation" },
+        { "n": 8, "from": "orch", "to": "embedder", "label": "embed the question" },
+        { "n": 9, "from": "embedder", "to": "vectordb", "label": "nearest-neighbour search" },
+        { "n": 10, "from": "vectordb", "to": "reranker", "label": "top candidates" },
+        { "n": 11, "from": "reranker", "to": "prompt", "label": "best passages" },
+        { "n": 12, "from": "prompt", "to": "router", "label": "full prompt" },
+        { "n": 13, "from": "router", "to": "large", "label": "picks a model" },
+        { "n": 14, "from": "large", "to": "orch", "label": "asks for a tool" },
+        { "n": 15, "from": "orch", "to": "zone:tools", "label": "runs it, sends the result back to the model" },
+        { "n": 16, "from": "large", "to": "output", "label": "answer streams out" },
+        { "n": 17, "from": "output", "to": "chat", "label": "streamed tokens" },
+
+        { "from": "router", "to": "fast", "label": "" },
+        { "from": "zone:tools", "to": "orch", "label": "", "reply": true },
+        { "from": "docs", "to": "vectordb", "label": "" },
+        { "from": "large", "to": "traces", "label": "" },
+        { "from": "traces", "to": "evals", "label": "" }
+      ]
+    }
+  ]
+}

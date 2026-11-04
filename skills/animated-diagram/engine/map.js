@@ -8,12 +8,13 @@ import { crosses } from './route.js';
 import { rowTracks, assignZones, pairSteps, isShort } from './grid.js';
 
 const METRICS = { iconScale: 0.72, name: [20, 640], sub: [15, 450], box: [18, 640], nameGap: 20, subGap: 19, pad: 30 };
-const ZONE = { inset: 5, top: 32, bottom: 8, r: 16, sw: 2, tx: 14, ty: 22 };
+const ZONE = { inset: 7, top: 32, bottom: 8, r: 16, sw: 2, tx: 14, ty: 22 };
 const RAIL = { w: 300, pad: 24, head: 30, row: 8, type: [18, 500], headType: TYPE.group };
 const INNER = 16;                                     // the map's margin inside the panel
 const ROUTE_MARGIN = 12;                              // routes may run this far outside the cells
 export const ROUTING = { bends: 4, detour: 2.5, floor: 420, crossings: 3, crossingShare: 0.25 };
 const LEGEND_FONT = 18;
+const BADGE_SPOTS = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8, 9, -9, 10, -10].map(i => 0.5 + i * 0.05);   // middle first
 
 // The legend's rows, measured now because the rail's size decides the map's. The steps are in number order.
 function planLegend(scene, steps, frame, k) {
@@ -60,7 +61,7 @@ function placeBadge(points, clearOf, offBorders, k) {
   for (const strict of [true, false]) for (const s of segs) {
     const usable = s.len - 2 * room - (s.last ? head : 0);
     if (usable < 0) continue;
-    for (const t of [0.5, 0.3, 0.7, 0.15, 0.85]) {
+    for (const t of BADGE_SPOTS) {
       const d = room + t * usable, ux = (s.q[0] - s.p[0]) / s.len, uy = (s.q[1] - s.p[1]) / s.len, x = s.p[0] + ux * d, y = s.p[1] + uy * d;
       if (ok(x, y) && (!strict || offBorders(boxAt(x, y)))) return [x, y];
     }
