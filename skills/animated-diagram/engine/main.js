@@ -1,5 +1,5 @@
 // main.js — the render page's entry point.
-//   window.boot(diagram, theme, { style, localIcons: string[] }) -> Promise<{ size: { w, h }, failures, moving }>
+//   window.boot(diagram, theme, { style, localIcons: string[] }) -> Promise<{ size: { w, h }, failures, moving, fills }>
 //   window.seek(f); window.checkGeometry() re-runs the layout check (tests)
 // The diagram arrives validated (scripts/schema.mjs). localIcons are module URLs; a local icon overrides a bundled
 // one of the same name. A theme logo is served from the mount /brand/.
@@ -25,6 +25,14 @@ function movingBoxes(scene, k) {
   const icons = scene.placed.map(p => { const [w, h] = p.mod.box; return { x: p.cx - w * p.scale / 2 - pad, y: p.cy - h * p.scale / 2 - pad, w: w * p.scale + 2 * pad, h: h * p.scale + 2 * pad }; });
   const arrows = scene.arrows.flatMap(a => a.points.slice(1).map((q, i) => { const p = a.points[i]; return { x: Math.min(p[0], q[0]) - reach, y: Math.min(p[1], q[1]) - reach, w: Math.abs(q[0] - p[0]) + 2 * reach, h: Math.abs(q[1] - p[1]) + 2 * reach }; }));
   return [...icons, ...arrows];
+}
+
+// The flat areas of the card and the colour each should come out in: the GIF's palette check compares them.
+function fillBoxes(composition) {
+  return (composition?.panels ?? []).flatMap(p => [
+    ...(p.fill ? [{ id: `panel:${p.layout.prefix ? p.layout.prefix.slice(0, -1) : 'main'}`, ...p.frame, colour: p.fill }] : []),
+    ...[...p.layout.groups, ...p.layout.bands].filter(z => z.zone).map(z => ({ id: `zone:${z.zone.name}`, x: z.x, y: z.y, w: z.w, h: z.h, colour: z.zone.fill })),
+  ]);
 }
 
 window.boot = async (diagram, theme, opts = {}) => {
@@ -59,7 +67,7 @@ window.boot = async (diagram, theme, opts = {}) => {
   window.scene = scene; window.composition = composition; window.canvas = canvas;
   window.checkGeometry = () => composition ? checkGeometry(composition, canvas, k, scene) : [];
   failures.push(...window.checkGeometry());
-  return { size: { w: canvas.w, h: canvas.h }, failures, moving: movingBoxes(scene, k) };
+  return { size: { w: canvas.w, h: canvas.h }, failures, moving: movingBoxes(scene, k), fills: fillBoxes(composition) };
 };
 
 window.seek = f => window.scene.seek(f);

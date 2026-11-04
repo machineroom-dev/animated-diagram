@@ -56,7 +56,7 @@ export function composeFlowGrid(diagram, canvas, ctx) {
   const frame = { x: MARGIN * k, y: TOP * k, w: W - 2 * MARGIN * k, h: H - (TOP + BOTTOM) * k };
   panelRect(scene, frame, T.panel, T.panelStroke, k, 'main');
   const layout = layoutPanel(diagram.panels[0], frame, { ...ctx, prefix: '' });
-  return { header: head, panels: [{ frame, layout }] };
+  return { header: head, panels: [{ frame, layout, fill: T.panel }] };
 }
 
 // Two panels side by side, each in its side's colours, under one headline naming both sides in those colours. The
@@ -76,7 +76,7 @@ export function composeComparison(diagram, canvas, ctx) {
     const f = frames[i], [size, weight] = TYPE.group;
     panelRect(scene, f, T[`side${side}Tint`], T[`side${side}`], k, side);
     scene.at('back', () => scene.text(f.x + CAPTION.x * k, f.y + CAPTION.y * k, diagram.panels[i].title.toUpperCase(), { size: size * k, weight, fill: nearestPassing(T[`side${side}`], T[`side${side}Tint`]), anchor: 'start', ls: CAPTION.ls * k, role: 'caption-side', owner: `${side}-caption` }));
-    return { frame: f, layout: layoutPanel(diagram.panels[i], f, { ...ctx, side, prefix: `${side}-` }) };
+    return { frame: f, fill: T[`side${side}Tint`], layout: layoutPanel(diagram.panels[i], f, { ...ctx, side, prefix: `${side}-` }) };
   });
   return { header: head, panels };
 }

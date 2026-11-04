@@ -1,16 +1,19 @@
 // check-pixels.mjs — the checks on the encoded GIF.
 //   parseGif(buf) -> { width, height, frames, delays (cs), loop (0 = forever, null = plays once) }   headers only, no LZW
-//   checkGif(file, { frames, delayCs, maxBytes, budgetBytes, moving }) -> Promise<{ failures, warnings, bytes }>
+//   checkGif(file, { frames, delayCs, maxBytes, budgetBytes, moving, fills }) -> Promise<{ failures, warnings, bytes }>
 // The pixels come from ffmpeg (rgb24). A pixel "changes" between two frames when a channel moves by more than 24.
 //   SEAM: the f89 → f0 change is more than 1.5× the median frame-to-frame change, and more than 0.05 % of the card
 //   (below that it can't be seen as a jump, and a card with little motion has a median near 0).
 //   FLICKER: pixels whose largest change over the loop is in (0, 24] — dither crawling on what should be still — are
 //   more than 0.05 % of the card. Pixels inside `moving` boxes (icons, arrows) are left out: an icon's slow turn or
 //   fade legitimately changes its anti-aliased edges by a few levels.
+//   FILL_DRIFT: the commonest colour in a flat area (`fills`: a zone or a panel) in frame 0 is more than 6 levels from the
+//   colour it was drawn in, because the 256-colour palette merged it into a neighbour. It stays still, so SEAM and
+//   FLICKER can't see it.
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 
-const STEP = 24, SEAM_RATIO = 1.5, SEAM_SHARE = 0.0005, FLICKER_SHARE = 0.0005;
+const STEP = 24, SEAM_RATIO = 1.5, SEAM_SHARE = 0.0005, FLICKER_SHARE = 0.0005, FILL_TOLERANCE = 6;
 
 export function parseGif(buf) {
   if (buf.toString('latin1', 0, 3) !== 'GIF') throw new Error('not a GIF file');
@@ -59,7 +62,20 @@ function eachFrame(file, size, fn) {
   });
 }
 
-export async function checkGif(file, { frames = 90, delayCs = 3, maxBytes, budgetBytes = 1_000_000, moving = [] } = {}) {
+// The commonest colour in a box of an rgb24 frame, as [r, g, b].
+function modalColour(frame, width, height, box) {
+  const x0 = Math.max(0, Math.ceil(box.x)), x1 = Math.min(width, Math.floor(box.x + box.w)), y0 = Math.max(0, Math.ceil(box.y)), y1 = Math.min(height, Math.floor(box.y + box.h));
+  const counts = new Map();
+  let best = null, top = 0;
+  for (let y = y0; y < y1; y++) for (let o = (y * width + x0) * 3, end = (y * width + x1) * 3; o < end; o += 3) {
+    const c = frame[o] << 16 | frame[o + 1] << 8 | frame[o + 2], n = (counts.get(c) ?? 0) + 1;
+    counts.set(c, n);
+    if (n > top) { top = n; best = c; }
+  }
+  return best === null ? null : [best >> 16 & 255, best >> 8 & 255, best & 255];
+}
+
+export async function checkGif(file, { frames = 90, delayCs = 3, maxBytes, budgetBytes = 1_000_000, moving = [], fills = [] } = {}) {
   const failures = [], warnings = [], buf = fs.readFileSync(file), bytes = buf.length, h = parseGif(buf);
   const fail = (code, detail) => failures.push({ code, ids: [], detail });
   if (h.frames !== frames) fail('FRAME_COUNT', `${h.frames} frames, expected ${frames}`);
@@ -84,6 +100,10 @@ export async function checkGif(file, { frames = 90, delayCs = 3, maxBytes, budge
     if (i === 0) first = f; else steps.push(delta(prev, f, maxDelta));
     prev = f; last = f;
   });
+  for (const fill of first ? fills : []) {
+    const got = modalColour(first, h.width, h.height, fill), want = [1, 3, 5].map(i => parseInt(fill.colour.slice(i, i + 2), 16));
+    if (got && got.some((v, i) => Math.abs(v - want[i]) > FILL_TOLERANCE)) failures.push({ code: 'FILL_DRIFT', ids: [fill.id], detail: `${fill.id} should be ${fill.colour} but came out #${got.map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase()}: the GIF's 256-colour palette merged it into a neighbour` });
+  }
   if (n > 1) {
     const seam = delta(last, first, maxDelta), sorted = [...steps].sort((a, b) => a - b), median = sorted[Math.floor(sorted.length / 2)];
     if (seam > SEAM_RATIO * median && seam > SEAM_SHARE * px) fail('SEAM', `${seam} px change from the last frame to the first, against a median of ${median} between frames — the loop jumps`);

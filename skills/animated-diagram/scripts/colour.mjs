@@ -70,7 +70,7 @@ export function zoneStyles(theme) {
   const ground = dark ? C.panel : C.bg;
   for (const zone of ZONE_NAMES) {
     const hue = hueOf(theme, zone);
-    out[zone] = styleOn(theme, hue, mix(ground, hue, dark ? 0.13 : 0.10), mix(ground, hue, dark ? 0.75 : 0.85), ground);
+    out[zone] = { name: zone, ...styleOn(theme, hue, mix(ground, hue, dark ? 0.13 : 0.10), mix(ground, hue, dark ? 0.75 : 0.85), ground) };
   }
   return out;
 }

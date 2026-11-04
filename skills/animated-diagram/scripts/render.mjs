@@ -50,9 +50,9 @@ export async function render({ diagramPath, themePath, outDir, style, keepFrames
 
   const framesDir = path.join(outDir, '.frames');
   const { page, done } = await openPage('engine/page.html', { viewport: { width: canvas.w, height: canvas.h }, mounts });
-  let failures, moving, warnings = [];
+  let failures, moving, fills, warnings = [];
   try {
-    ({ failures, moving } = await page.evaluate(([d, t, o]) => window.boot(d, t, o), [diagram, theme, { style: style ?? theme.style, localIcons: local.names.map(n => `/local-icons/${n}.js`) }]));
+    ({ failures, moving, fills } = await page.evaluate(([d, t, o]) => window.boot(d, t, o), [diagram, theme, { style: style ?? theme.style, localIcons: local.names.map(n => `/local-icons/${n}.js`) }]));
     const shot = (f, file) => page.evaluate(f => window.seek(f), f).then(() => page.screenshot({ path: file, clip: { x: 0, y: 0, width: canvas.w, height: canvas.h } }));
     if (failures.length) {
       await shot(still, files.png);
@@ -67,7 +67,7 @@ export async function render({ diagramPath, themePath, outDir, style, keepFrames
   encodeGif(framesDir, files.gif, path.join(framesDir, 'palette.png'));
   encodeMp4(framesDir, files.mp4, { loops: 4, padColor: theme.colors.bg, frames: FRAMES });
   stillPng(framesDir, still, files.png);
-  const g = await checkGif(files.gif, { frames: FRAMES, delayCs: 3, maxBytes: canvas.maxGifBytes, budgetBytes: 1_000_000 * (canvas.w * canvas.h) / (1080 * 1350), moving });
+  const g = await checkGif(files.gif, { frames: FRAMES, delayCs: 3, maxBytes: canvas.maxGifBytes, budgetBytes: 1_000_000 * (canvas.w * canvas.h) / (1080 * 1350), moving, fills });
   failures = g.failures; warnings = g.warnings;
   writeCheck({ ok: failures.length === 0, failures, warnings, bytes: g.bytes });
   if (!keepFrames) fs.rmSync(framesDir, { recursive: true, force: true });

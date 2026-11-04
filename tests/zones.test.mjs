@@ -135,6 +135,18 @@ test('group titles have their own owners, so two that collide are caught', async
   assert.equal(new Set(owners).size, 2, owners.join());
 });
 
+test('boot reports each zone and panel with the colour it should come out in', async () => {
+  const d = fixture('cdn');
+  d.panels[0].groups[0].color = 'teal';
+  const t = theme(), fills = await page.evaluate(async ([d, t]) => (await window.boot(d, t, { style: 'filled', localIcons: [] })).fills, [d, t]);
+  const z = zoneStyles(t).teal, zone = fills.find(f => f.id === 'zone:teal');
+  assert.equal(zone.colour, z.fill);
+  assert.ok(zone.w > 100 && zone.h > 100);
+  assert.equal(fills.find(f => f.id === 'panel:main').colour, t.colors.panel);
+  const stack = await page.evaluate(async ([d, t]) => (await window.boot(d, t, { style: 'filled', localIcons: [] })).fills, [fixture('stack'), t]);
+  assert.equal(stack.filter(f => f.id.startsWith('zone:')).length, 5);
+});
+
 test('rows too tall for the panel give ROWS_TOO_TALL', async () => {
   const d = { canvas: 'landscape', template: 'flow-grid', title: 'Too many rows', panels: [{ grid: { cols: 1, rows: 6 }, nodes: [0, 1, 2, 3, 4, 5].map(i => ({ id: `n${i}`, icon: 'lock', name: `Node ${i}`, sub: 'with a sub-label', cell: [0, i] })), steps: [] }] };
   await page.setViewportSize({ width: 1200, height: 675 });

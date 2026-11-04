@@ -43,6 +43,7 @@
 | `TEXT_TOO_SMALL` | text under 13 px | (only a custom theme or icon can cause it) |
 | `SEAM` | the loop jumps from the last frame to the first | an icon's loop isn't seamless: fix its `loop()` |
 | `FLICKER` | still pixels shimmer across the loop | something outside the icons and arrows animates |
+| `FILL_DRIFT` | a zone or panel came out in the wrong colour: the GIF's palette ran out of room and merged it | fewer zones, or fewer moving parts in that colour |
 | `FRAME_COUNT`, `DELAY`, `LOOP` | the GIF's timing is wrong | (renderer bug: report it) |
 | `FILE_SIZE` | the GIF is over the canvas's platform cap | fewer moving parts, or a smaller canvas |
 

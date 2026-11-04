@@ -50,6 +50,28 @@ test('flicker', async () => {
   assert.ok(!r2.failures.some(f => f.code === 'FLICKER'), JSON.stringify(r2));
 });
 
+test('a zone whose tint the palette changed gives FILL_DRIFT', async () => {
+  const dir = tmpDir('ad-drift-'), gif = path.join(dir, 'x.gif');
+  ff(['-f', 'lavfi', '-i', 'color=c=0x3366cc:s=200x150,drawbox=x=20:y=20:w=100:h=80:color=0x1c2a3a:t=fill', '-frames:v', '90', '-start_number', '0', path.join(dir, 'f%02d.png')]);
+  encodeGif(dir, gif, path.join(dir, 'p.png'));
+  const zone = { id: 'z', x: 20, y: 20, w: 100, h: 80 };
+  const ok = await checkGif(gif, { frames: 90, delayCs: 3, maxBytes: 5_000_000, fills: [{ ...zone, colour: '#1C2A3A' }] });
+  assert.ok(!ok.failures.some(f => f.code === 'FILL_DRIFT'), JSON.stringify(ok));
+  const bad = await checkGif(gif, { frames: 90, delayCs: 3, maxBytes: 5_000_000, fills: [{ ...zone, colour: '#2A3A1C' }] });
+  const f = bad.failures.find(x => x.code === 'FILL_DRIFT');
+  assert.ok(f, JSON.stringify(bad));
+  assert.deepEqual(f.ids, ['z']);
+  assert.match(f.detail, /#2A3A1C/);
+});
+
+test('a zone off the edge of the card is clipped, not an error', async () => {
+  const dir = tmpDir('ad-drift2-'), gif = path.join(dir, 'x.gif');
+  ff(['-f', 'lavfi', '-i', 'color=c=0x3366cc:s=64x48', '-frames:v', '90', '-start_number', '0', path.join(dir, 'f%02d.png')]);
+  encodeGif(dir, gif, path.join(dir, 'p.png'));
+  const r = await checkGif(gif, { frames: 90, delayCs: 3, maxBytes: 5_000_000, fills: [{ id: 'z', x: -10, y: -10, w: 500, h: 500, colour: '#3366CC' }] });
+  assert.ok(!r.failures.some(f => f.code === 'FILL_DRIFT'), JSON.stringify(r));
+});
+
 test('headers: frame count, delays, loop flag and size', async () => {
   const dir = tmpDir('ad-hdr-'), gif = path.join(dir, 'x.gif');
   ff(['-f', 'lavfi', '-i', 'color=c=0x3366cc:s=64x48:r=10', '-frames:v', '12', '-loop', '-1', gif]);   // 12 frames, 10 cs, no loop
